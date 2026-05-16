@@ -1,0 +1,11 @@
+com\smarthome\analytics\entity\AnomalyDetection.class
+com\smarthome\analytics\controller\AnalyticsController.class
+com\smarthome\analytics\entity\UserBehavior.class
+com\smarthome\analytics\AnalyticsServiceApplication.class
+com\smarthome\analytics\entity\EnergyConsumption.class
+com\smarthome\analytics\service\AnomalyDetectionService.class
+com\smarthome\analytics\repository\EnergyConsumptionRepository.class
+com\smarthome\analytics\service\EnergyStatisticsService.class
+com\smarthome\analytics\repository\UserBehaviorRepository.class
+com\smarthome\analytics\repository\AnomalyDetectionRepository.class
+com\smarthome\analytics\service\UserBehaviorAnalysisService.class

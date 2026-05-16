@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package com.smarthome.edge;
+
+option java_multiple_files = true;
+option java_package = "com.smarthome.edge.grpc";
+option java_outer_classname = "DeviceGrpcProto";
+
+message DeviceRequest {
+    string device_id = 1;
+    string command = 2;
+    string parameters = 3;
+    int64 timestamp = 4;
+}
+
+message DeviceResponse {
+    string device_id = 1;
+    bool success = 2;
+    string message = 3;
+    string status = 4;
+    int64 timestamp = 5;
+}
+
+message DeviceStatusRequest {
+    repeated string device_ids = 1;
+}
+
+message DeviceStatus {
+    string device_id = 1;
+    string status = 2;
+    string device_type = 3;
+    double power = 4;
+    int64 last_update = 5;
+}
+
+message DeviceStatusResponse {
+    repeated DeviceStatus status_list = 1;
+}
+
+message SyncRequest {
+    string edge_id = 1;
+    int64 last_sync_time = 2;
+}
+
+message SyncResponse {
+    bool success = 1;
+    string message = 2;
+    int64 sync_time = 3;
+}
+
+service DeviceControlService {
+    rpc ExecuteCommand(DeviceRequest) returns (DeviceResponse);
+    rpc GetDeviceStatus(DeviceStatusRequest) returns (DeviceStatusResponse);
+    rpc SyncDeviceState(SyncRequest) returns (SyncResponse);
+}

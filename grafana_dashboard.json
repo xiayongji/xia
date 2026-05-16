@@ -1,0 +1,141 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "智能家居微服务监控",
+    "tags": ["smart-home", "microservices"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "hideControls": false,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "服务健康状态",
+        "type": "singlestat",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "count(up)",
+            "legendFormat": "运行中服务数"
+          }
+        ],
+        "colorBackground": true,
+        "colorValue": false,
+        "colors": ["#299c46", "rgba(237, 129, 40, 0.89)", "#d44a3a"],
+        "valueMaps": [
+          {
+            "value": "0",
+            "op": "=",
+            "text": "离线"
+          },
+          {
+            "value": "1",
+            "op": "=",
+            "text": "在线"
+          }
+        ],
+        "prefix": "",
+        "suffix": " 个服务"
+      },
+      {
+        "id": 2,
+        "title": "CPU使用率",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "100 - (avg by(instance) (irate(process_cpu_usage[1m])) * 100)",
+            "legendFormat": "{{ instance }}"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "CPU %",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "内存使用率",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(1 - (jvm_memory_max_bytes{area=\"heap\"} - jvm_memory_used_bytes{area=\"heap\"}) / jvm_memory_max_bytes{area=\"heap\"}) * 100",
+            "legendFormat": "{{ instance }}"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "内存 %",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "请求总数",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m]))",
+            "legendFormat": "总请求"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "请求/秒"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "响应时间",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.5, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "秒"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "设备在线率",
+        "type": "singlestat",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(device_online_total) / sum(device_total) * 100",
+            "legendFormat": "在线率"
+          }
+        ],
+        "colorBackground": true,
+        "colorValue": false,
+        "colors": ["#299c46", "#eab839", "#d44a3a"],
+        "suffix": " %"
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  },
+  "overwrite": false
+}

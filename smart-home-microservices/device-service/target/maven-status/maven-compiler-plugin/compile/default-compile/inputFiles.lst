@@ -1,0 +1,13 @@
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\adapter\DeviceAdapter.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\adapter\WiFiDeviceAdapter.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\controller\DeviceController.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\DeviceServiceApplication.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\repository\DeviceShadowRepository.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\adapter\BluetoothDeviceAdapter.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\entity\DeviceHeartbeat.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\adapter\ZigBeeDeviceAdapter.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\service\DeviceService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\service\DeviceShadowService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\entity\DeviceShadow.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\repository\DeviceRepository.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\device-service\src\main\java\com\smarthome\device\entity\Device.java

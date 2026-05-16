@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package smarthome.device;
+
+option java_multiple_files = true;
+option java_package = "com.smarthome.grpc";
+option java_outer_classname = "DeviceProto";
+option objc_class_prefix = "SH";
+
+service DeviceService {
+  rpc ControlDevice(ControlRequest) returns (ControlResponse);
+  rpc GetDeviceStatus(StatusRequest) returns (StatusResponse);
+  rpc BatchGetStatus(BatchStatusRequest) returns (BatchStatusResponse);
+  rpc SubscribeStatus(SubscribeRequest) returns (stream StatusUpdate);
+}
+
+message ControlRequest {
+  string device_id = 1;
+  string command = 2;
+  int32 priority = 3;
+  map<string, string> params = 4;
+}
+
+message ControlResponse {
+  bool success = 1;
+  string message = 2;
+  string device_id = 3;
+  string status = 4;
+}
+
+message StatusRequest {
+  string device_id = 1;
+}
+
+message StatusResponse {
+  string device_id = 1;
+  string status = 2;
+  map<string, string> properties = 3;
+}
+
+message BatchStatusRequest {
+  repeated string device_ids = 1;
+}
+
+message BatchStatusResponse {
+  repeated StatusResponse statuses = 1;
+}
+
+message SubscribeRequest {
+  repeated string device_ids = 1;
+}
+
+message StatusUpdate {
+  string device_id = 1;
+  string status = 2;
+  int64 timestamp = 3;
+}

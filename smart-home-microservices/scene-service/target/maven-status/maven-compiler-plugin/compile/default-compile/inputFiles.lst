@@ -1,0 +1,16 @@
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\entity\PredictedScene.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\repository\SceneRepository.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\service\SceneExecutionService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\entity\SceneAction.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\entity\SceneExecution.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\entity\SceneRule.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\service\ScenePredictionService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\SceneServiceApplication.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\service\RuleEngineService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\service\ActionOrchestratorService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\controller\SceneController.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\service\DroolsRuleEngineService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\entity\TriggerEvent.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\service\SceneService.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\entity\Scene.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\scene-service\src\main\java\com\smarthome\scene\repository\SceneRuleRepository.java
