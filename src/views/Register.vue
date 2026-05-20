@@ -101,7 +101,7 @@
           
           <div class="login-link">
             <span>已有账号?</span>
-            <el-button type="text" @click="goToLogin">立即登录</el-button>
+            <el-button type="primary" link @click="goToLogin">立即登录</el-button>
           </div>
         </el-form>
       </div>
@@ -144,6 +144,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { userApi } from '../api/user'
 import { HomeFilled, User, Message, PhoneFilled, Lock, View, Hide, StarFilled, Checked, Lightning, MapLocation } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -193,17 +194,30 @@ const showPassword = ref(false)
 const agreeTerms = ref(false)
 const loading = ref(false)
 
-const handleRegister = () => {
-  registerFormRef.value.validate((valid) => {
-    if (valid && agreeTerms.value) {
-      loading.value = true
-      setTimeout(() => {
-        localStorage.setItem('token', 'mock-token')
-        localStorage.setItem('username', registerForm.value.username)
-        ElMessage.success('注册成功')
-        router.push('/dashboard')
-        loading.value = false
-      }, 1500)
+const handleRegister = async () => {
+  registerFormRef.value.validate(async (valid) => {
+    if (!valid || !agreeTerms.value) {
+      if (!agreeTerms.value) {
+        ElMessage.warning('请先同意用户协议和隐私政策')
+      }
+      return
+    }
+    loading.value = true
+    try {
+      await userApi.register({
+        username: registerForm.value.username,
+        email: registerForm.value.email,
+        phone: registerForm.value.phone,
+        password: registerForm.value.password,
+        fullName: registerForm.value.username
+      })
+      ElMessage.success('注册成功，请登录')
+      router.push('/login')
+    } catch (error) {
+      const message = error.response?.data || error.message || '注册失败'
+      ElMessage.error(typeof message === 'string' ? message : '注册失败')
+    } finally {
+      loading.value = false
     }
   })
 }

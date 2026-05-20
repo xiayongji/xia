@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/user/register").permitAll()
                 .requestMatchers("/api/user/login").permitAll()
                 .requestMatchers("/api/user/health").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             );
         

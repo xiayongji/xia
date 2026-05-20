@@ -1,410 +1,972 @@
 <template>
   <div class="admin-dashboard">
-    <div class="dashboard-header">
-      <h1>管理控制台</h1>
-      <div class="header-stats">
-        <div class="stat-card">
-          <div class="stat-icon blue">
+    <el-container>
+      <!-- 侧边栏 -->
+      <el-aside width="240px" class="admin-sidebar">
+        <div class="sidebar-header">
+          <h2>管理员面板</h2>
+        </div>
+        <el-menu
+          :default-active="activeMenu"
+          class="sidebar-menu"
+          @select="handleMenuSelect"
+        >
+          <el-menu-item index="dashboard">
+            <el-icon><DataBoard /></el-icon>
+            <span>仪表盘</span>
+          </el-menu-item>
+          <el-menu-item index="users">
             <el-icon><User /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.totalUsers }}</span>
-            <span class="stat-label">总用户数</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon green">
-            <el-icon><Monitor /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.totalDevices }}</span>
-            <span class="stat-label">设备总数</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon orange">
-            <el-icon><Lightning /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.todayEnergy }} kWh</span>
-            <span class="stat-label">今日能耗</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon red">
-            <el-icon><Warning /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.alerts }}</span>
-            <span class="stat-label">待处理告警</span>
-          </div>
-        </div>
-      </div>
-    </div>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="roles">
+            <el-icon><Key /></el-icon>
+            <span>角色权限</span>
+          </el-menu-item>
+          <el-menu-item index="logs">
+            <el-icon><Document /></el-icon>
+            <span>操作日志</span>
+          </el-menu-item>
+          <el-menu-item index="settings">
+            <el-icon><Setting /></el-icon>
+            <span>系统设置</span>
+          </el-menu-item>
+          <el-divider />
+          <el-menu-item index="back">
+            <el-icon><ArrowLeft /></el-icon>
+            <span>返回主页</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
 
-    <div class="dashboard-content">
-      <div class="content-grid">
-        <div class="card user-activity">
-          <div class="card-header">
-            <h3>用户活动趋势</h3>
-            <el-radio-group v-model="activityRange" size="small">
-              <el-radio-button label="week">本周</el-radio-button>
-              <el-radio-button label="month">本月</el-radio-button>
-            </el-radio-group>
+      <!-- 主内容区 -->
+      <el-container>
+        <!-- 顶部导航 -->
+        <el-header class="admin-header">
+          <div class="header-left">
+            <h3>{{ pageTitle }}</h3>
           </div>
-          <div class="chart-container">
-            <div class="chart-placeholder">
-              <el-icon :size="48"><DataLine /></el-icon>
-              <span>用户活动趋势图表</span>
-            </div>
+          <div class="header-right">
+            <el-dropdown @command="handleCommand">
+              <span class="user-dropdown">
+                <el-avatar :size="32">{{ username?.charAt(0).toUpperCase() }}</el-avatar>
+                <span class="username">{{ username }}</span>
+                <el-icon><ArrowDown /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                  <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
-        </div>
+        </el-header>
 
-        <div class="card system-status">
-          <div class="card-header">
-            <h3>系统状态</h3>
-            <el-tag :type="systemHealth === 'healthy' ? 'success' : 'danger'">
-              {{ systemHealth === 'healthy' ? '运行正常' : '异常' }}
-            </el-tag>
-          </div>
-          <div class="status-list">
-            <div class="status-item">
-              <span class="status-label">API 服务</span>
-              <el-switch v-model="services.api" active-color="#13ce66" />
-            </div>
-            <div class="status-item">
-              <span class="status-label">数据库</span>
-              <el-switch v-model="services.database" active-color="#13ce66" />
-            </div>
-            <div class="status-item">
-              <span class="status-label">Redis 缓存</span>
-              <el-switch v-model="services.redis" active-color="#13ce66" />
-            </div>
-            <div class="status-item">
-              <span class="status-label">消息队列</span>
-              <el-switch v-model="services.mq" active-color="#13ce66" />
-            </div>
-          </div>
-        </div>
+        <!-- 内容区域 -->
+        <el-main class="admin-content">
+          <!-- 仪表盘视图 -->
+          <div v-if="activeMenu === 'dashboard'" class="dashboard-view">
+            <el-row :gutter="20">
+              <el-col :span="6">
+                <el-card class="stat-card">
+                  <div class="stat-icon users">
+                    <el-icon :size="32"><User /></el-icon>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.totalUsers || 0 }}</div>
+                    <div class="stat-label">总用户数</div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card">
+                  <div class="stat-icon active">
+                    <el-icon :size="32"><UserFilled /></el-icon>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.activeUsers || 0 }}</div>
+                    <div class="stat-label">活跃用户</div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card">
+                  <div class="stat-icon roles">
+                    <el-icon :size="32"><Key /></el-icon>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.totalRoles || 0 }}</div>
+                    <div class="stat-label">角色数</div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card">
+                  <div class="stat-icon logs">
+                    <el-icon :size="32"><Document /></el-icon>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.recentLogs || 0 }}</div>
+                    <div class="stat-label">今日操作</div>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
 
-        <div class="card recent-users">
-          <div class="card-header">
-            <h3>最近用户</h3>
-            <el-button type="primary" size="small" text @click="$router.push('/users')">
-              管理用户
-            </el-button>
+            <el-row :gutter="20" style="margin-top: 20px">
+              <el-col :span="16">
+                <el-card class="chart-card">
+                  <template #header>
+                    <div class="card-header">
+                      <span>系统概览</span>
+                    </div>
+                  </template>
+                  <div class="overview-content">
+                    <div class="overview-item">
+                      <span class="label">系统版本:</span>
+                      <span class="value">v1.0.0</span>
+                    </div>
+                    <div class="overview-item">
+                      <span class="label">系统状态:</span>
+                      <el-tag type="success">正常运行</el-tag>
+                    </div>
+                    <div class="overview-item">
+                      <span class="label">数据库连接:</span>
+                      <el-tag type="success">已连接</el-tag>
+                    </div>
+                    <div class="overview-item">
+                      <span class="label">Redis缓存:</span>
+                      <el-tag type="success">已连接</el-tag>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="8">
+                <el-card class="chart-card">
+                  <template #header>
+                    <div class="card-header">
+                      <span>快捷操作</span>
+                    </div>
+                  </template>
+                  <div class="quick-actions">
+                    <el-button type="primary" @click="activeMenu = 'users'">
+                      <el-icon><Plus /></el-icon>
+                      添加用户
+                    </el-button>
+                    <el-button type="success" @click="activeMenu = 'roles'">
+                      <el-icon><Key /></el-icon>
+                      管理角色
+                    </el-button>
+                    <el-button type="warning" @click="activeMenu = 'logs'">
+                      <el-icon><Document /></el-icon>
+                      查看日志
+                    </el-button>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
           </div>
-          <div class="user-list">
-            <div v-for="user in recentUsers" :key="user.id" class="user-item">
-              <el-avatar :size="32">{{ user.name.charAt(0) }}</el-avatar>
-              <div class="user-detail">
-                <span class="user-name">{{ user.name }}</span>
-                <span class="user-time">{{ user.lastActive }}</span>
-              </div>
-              <el-tag size="small" :type="user.role === 'admin' ? 'danger' : 'info'">
-                {{ user.role === 'admin' ? '管理员' : '用户' }}
-              </el-tag>
-            </div>
-          </div>
-        </div>
 
-        <div class="card alerts-panel">
-          <div class="card-header">
-            <h3>实时告警</h3>
-            <el-badge :value="alerts.length" class="alert-badge">
-              <el-button size="small">查看全部</el-button>
-            </el-badge>
+          <!-- 用户管理视图 -->
+          <div v-if="activeMenu === 'users'" class="users-view">
+            <el-card>
+              <template #header>
+                <div class="card-header">
+                  <span>用户列表</span>
+                  <el-button type="primary" @click="showAddUserDialog">
+                    <el-icon><Plus /></el-icon>
+                    添加用户
+                  </el-button>
+                </div>
+              </template>
+
+              <el-table :data="users" stripe v-loading="loading">
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="username" label="用户名" width="120" />
+                <el-table-column prop="fullName" label="姓名" width="120" />
+                <el-table-column prop="email" label="邮箱" width="180" />
+                <el-table-column prop="phone" label="电话" width="130" />
+                <el-table-column prop="roleName" label="角色" width="100">
+                  <template #default="{ row }">
+                    <el-tag :type="getRoleTagType(row.roleName)">
+                      {{ row.roleName || '无角色' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="enabled" label="状态" width="100">
+                  <template #default="{ row }">
+                    <el-tag :type="row.enabled ? 'success' : 'danger'">
+                      {{ row.enabled ? '启用' : '禁用' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="createdAt" label="创建时间" width="180">
+                  <template #default="{ row }">
+                    {{ formatDate(row.createdAt) }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200" fixed="right">
+                  <template #default="{ row }">
+                    <el-button size="small" type="primary" link @click="editUser(row)">
+                      编辑
+                    </el-button>
+                    <el-button size="small" type="warning" link @click="resetPassword(row)">
+                      重置密码
+                    </el-button>
+                    <el-button 
+                      size="small" 
+                      :type="row.enabled ? 'danger' : 'success'" 
+                      link 
+                      @click="toggleUserStatus(row)"
+                    >
+                      {{ row.enabled ? '禁用' : '启用' }}
+                    </el-button>
+                    <el-button size="small" type="danger" link @click="deleteUser(row)">
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <el-pagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :total="totalUsers"
+                :page-sizes="[10, 20, 50, 100]"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="loadUsers"
+                @current-change="loadUsers"
+                style="margin-top: 20px"
+              />
+            </el-card>
           </div>
-          <div class="alerts-list">
-            <div v-for="alert in alerts" :key="alert.id" class="alert-item">
-              <div class="alert-icon" :class="alert.level">
-                <el-icon><Warning /></el-icon>
-              </div>
-              <div class="alert-content">
-                <span class="alert-title">{{ alert.title }}</span>
-                <span class="alert-time">{{ alert.time }}</span>
-              </div>
-              <el-button size="small" type="primary" text>处理</el-button>
-            </div>
+
+          <!-- 角色管理视图 -->
+          <div v-if="activeMenu === 'roles'" class="roles-view">
+            <el-card>
+              <template #header>
+                <div class="card-header">
+                  <span>角色管理</span>
+                  <el-button type="primary" @click="showAddRoleDialog">
+                    <el-icon><Plus /></el-icon>
+                    添加角色
+                  </el-button>
+                </div>
+              </template>
+
+              <el-table :data="roles" stripe v-loading="loading">
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="roleName" label="角色名称" width="150" />
+                <el-table-column prop="description" label="描述" />
+                <el-table-column prop="permissionCount" label="权限数量" width="120">
+                  <template #default="{ row }">
+                    <el-tag type="info">{{ row.permissionCount }} 个权限</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="150" fixed="right">
+                  <template #default="{ row }">
+                    <el-button size="small" type="primary" link @click="editRole(row)">
+                      编辑
+                    </el-button>
+                    <el-button 
+                      size="small" 
+                      type="danger" 
+                      link 
+                      @click="deleteRole(row)"
+                      :disabled="row.roleName === 'ROLE_ADMIN' || row.roleName === 'ROLE_USER'"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
           </div>
-        </div>
-      </div>
-    </div>
+
+          <!-- 操作日志视图 -->
+          <div v-if="activeMenu === 'logs'" class="logs-view">
+            <el-card>
+              <template #header>
+                <div class="card-header">
+                  <span>操作日志</span>
+                  <el-button @click="loadLogs">
+                    <el-icon><Refresh /></el-icon>
+                    刷新
+                  </el-button>
+                </div>
+              </template>
+
+              <el-table :data="logs" stripe v-loading="loading">
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="username" label="操作用户" width="120" />
+                <el-table-column prop="operation" label="操作类型" width="150" />
+                <el-table-column prop="resource" label="资源" width="100" />
+                <el-table-column prop="ipAddress" label="IP地址" width="140" />
+                <el-table-column prop="success" label="状态" width="100">
+                  <template #default="{ row }">
+                    <el-tag :type="row.success ? 'success' : 'danger'">
+                      {{ row.success ? '成功' : '失败' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="details" label="详情" />
+                <el-table-column prop="timestamp" label="时间" width="180">
+                  <template #default="{ row }">
+                    {{ formatDate(row.timestamp) }}
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <el-pagination
+                v-model:current-page="logCurrentPage"
+                v-model:page-size="logPageSize"
+                :total="totalLogs"
+                layout="total, prev, pager, next"
+                @size-change="loadLogs"
+                @current-change="loadLogs"
+                style="margin-top: 20px"
+              />
+            </el-card>
+          </div>
+
+          <!-- 系统设置视图 -->
+          <div v-if="activeMenu === 'settings'" class="settings-view">
+            <el-card>
+              <template #header>
+                <span>系统设置</span>
+              </template>
+              <el-form :model="systemConfig" label-width="150px">
+                <el-form-item label="系统名称">
+                  <el-input v-model="systemConfig.systemName" />
+                </el-form-item>
+                <el-form-item label="版本号">
+                  <el-input v-model="systemConfig.version" disabled />
+                </el-form-item>
+                <el-form-item label="最大用户数">
+                  <el-input-number v-model="systemConfig.maxUsers" :min="10" :max="10000" />
+                </el-form-item>
+                <el-form-item label="会话超时(秒)">
+                  <el-input-number v-model="systemConfig.sessionTimeout" :min="300" :max="86400" />
+                </el-form-item>
+                <el-form-item label="密码最小长度">
+                  <el-input-number v-model="systemConfig.passwordMinLength" :min="6" :max="20" />
+                </el-form-item>
+                <el-form-item label="允许注册">
+                  <el-switch v-model="systemConfig.allowRegistration" />
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" @click="saveSystemConfig">保存设置</el-button>
+                  <el-button @click="loadSystemConfig">重置</el-button>
+                </el-form-item>
+              </el-form>
+            </el-card>
+          </div>
+        </el-main>
+      </el-container>
+    </el-container>
+
+    <!-- 添加/编辑用户对话框 -->
+    <el-dialog
+      v-model="userDialogVisible"
+      :title="isEditUser ? '编辑用户' : '添加用户'"
+      width="600px"
+    >
+      <el-form :model="userForm" :rules="userRules" ref="userFormRef" label-width="100px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="userForm.username" :disabled="isEditUser" />
+        </el-form-item>
+        <el-form-item label="姓名" prop="fullName">
+          <el-input v-model="userForm.fullName" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="userForm.email" type="email" />
+        </el-form-item>
+        <el-form-item label="电话" prop="phone">
+          <el-input v-model="userForm.phone" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password" v-if="!isEditUser">
+          <el-input v-model="userForm.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="角色" prop="roleId">
+          <el-select v-model="userForm.roleId" placeholder="选择角色">
+            <el-option
+              v-for="role in roles"
+              :key="role.id"
+              :label="role.roleName"
+              :value="role.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="userDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveUser">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 添加/编辑角色对话框 -->
+    <el-dialog
+      v-model="roleDialogVisible"
+      :title="isEditRole ? '编辑角色' : '添加角色'"
+      width="500px"
+    >
+      <el-form :model="roleForm" :rules="roleRules" ref="roleFormRef" label-width="100px">
+        <el-form-item label="角色名称" prop="roleName">
+          <el-input v-model="roleForm.roleName" :disabled="isEditRole && roleForm.roleName === 'ROLE_ADMIN'" />
+        </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input v-model="roleForm.description" type="textarea" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveRole">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 重置密码对话框 -->
+    <el-dialog v-model="resetPasswordDialogVisible" title="重置密码" width="400px">
+      <el-form :model="resetPasswordForm" label-width="100px">
+        <el-form-item label="新密码">
+          <el-input v-model="resetPasswordForm.newPassword" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetPasswordDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmResetPassword">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { User, Monitor, Lightning, Warning, DataLine } from '@element-plus/icons-vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { 
+  User, Key, Document, Setting, Plus, Refresh, 
+  DataBoard, UserFilled, ArrowDown, ArrowLeft
+} from '@element-plus/icons-vue'
+import adminAPI from '../api/admin'
 
-const activityRange = ref('week')
-const systemHealth = ref('healthy')
+const router = useRouter()
+const username = localStorage.getItem('username')
 
-const services = ref({
-  api: true,
-  database: true,
-  redis: true,
-  mq: true
+const activeMenu = ref('dashboard')
+const loading = ref(false)
+
+// 分页
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalUsers = ref(0)
+const logCurrentPage = ref(1)
+const logPageSize = ref(20)
+const totalLogs = ref(0)
+
+// 数据
+const stats = ref({})
+const users = ref([])
+const roles = ref([])
+const logs = ref([])
+const systemConfig = reactive({
+  systemName: '智能家居管理系统',
+  version: '1.0.0',
+  maxUsers: 1000,
+  sessionTimeout: 3600,
+  passwordMinLength: 6,
+  allowRegistration: false
 })
 
-const stats = ref({
-  totalUsers: 156,
-  totalDevices: 423,
-  todayEnergy: 128.5,
-  alerts: 3
+// 对话框状态
+const userDialogVisible = ref(false)
+const roleDialogVisible = ref(false)
+const resetPasswordDialogVisible = ref(false)
+const isEditUser = ref(false)
+const isEditRole = ref(false)
+
+// 表单
+const userFormRef = ref(null)
+const roleFormRef = ref(null)
+const userForm = reactive({
+  id: null,
+  username: '',
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+  roleId: null
+})
+const roleForm = reactive({
+  id: null,
+  roleName: '',
+  description: ''
+})
+const resetPasswordForm = reactive({
+  userId: null,
+  newPassword: ''
 })
 
-const recentUsers = ref([
-  { id: 1, name: '张三', role: 'user', lastActive: '2分钟前' },
-  { id: 2, name: '李四', role: 'user', lastActive: '5分钟前' },
-  { id: 3, name: '王五', role: 'admin', lastActive: '10分钟前' },
-  { id: 4, name: '赵六', role: 'user', lastActive: '30分钟前' }
-])
+const userRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 8, message: '密码长度至少8位', trigger: 'blur' }
+  ]
+}
 
-const alerts = ref([
-  { id: 1, level: 'warning', title: '设备 D005 能耗异常', time: '10分钟前' },
-  { id: 2, level: 'info', title: '新用户注册: 陈七', time: '30分钟前' },
-  { id: 3, level: 'danger', title: '空调设备连接中断', time: '1小时前' }
-])
+const roleRules = {
+  roleName: [{ required: true, message: '请输入角色名称', trigger: 'blur' }]
+}
+
+const pageTitle = computed(() => {
+  const titles = {
+    dashboard: '仪表盘',
+    users: '用户管理',
+    roles: '角色权限',
+    logs: '操作日志',
+    settings: '系统设置'
+  }
+  return titles[activeMenu.value] || '仪表盘'
+})
+
+onMounted(() => {
+  if (!localStorage.getItem('token')) {
+    router.push('/login')
+    return
+  }
+  const tab = router.currentRoute.value.query.tab
+  if (tab && ['dashboard', 'users', 'roles', 'logs', 'settings'].includes(String(tab))) {
+    activeMenu.value = String(tab)
+    if (tab === 'users') loadUsers()
+    if (tab === 'roles') loadRoles()
+    if (tab === 'logs') loadLogs()
+    if (tab === 'settings') loadSystemConfig()
+  } else {
+    loadDashboardStats()
+  }
+})
+
+const handleMenuSelect = (index) => {
+  if (index === 'back') {
+    router.push('/user')
+    return
+  }
+  activeMenu.value = index
+  
+  if (index === 'users') loadUsers()
+  if (index === 'roles') loadRoles()
+  if (index === 'logs') loadLogs()
+  if (index === 'settings') loadSystemConfig()
+}
+
+const handleCommand = (command) => {
+  if (command === 'logout') {
+    ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+      router.push('/login')
+    })
+  } else if (command === 'profile') {
+    router.push('/profile')
+  }
+}
+
+const loadDashboardStats = async () => {
+  try {
+    const res = await adminAPI.getDashboardStats()
+    stats.value = res
+  } catch (error) {
+    ElMessage.error('加载统计数据失败')
+  }
+}
+
+const loadUsers = async () => {
+  loading.value = true
+  try {
+    const res = await adminAPI.getUsers(currentPage.value - 1, pageSize.value)
+    users.value = res.users
+    totalUsers.value = res.totalItems
+  } catch (error) {
+    ElMessage.error('加载用户列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadRoles = async () => {
+  loading.value = true
+  try {
+    const res = await adminAPI.getRoles()
+    roles.value = res
+  } catch (error) {
+    ElMessage.error('加载角色列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadLogs = async () => {
+  loading.value = true
+  try {
+    const res = await adminAPI.getLogs(logCurrentPage.value - 1, logPageSize.value)
+    logs.value = res.logs
+    totalLogs.value = res.totalItems
+  } catch (error) {
+    ElMessage.error('加载日志列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadSystemConfig = async () => {
+  try {
+    const res = await adminAPI.getSystemConfig()
+    Object.assign(systemConfig, res)
+  } catch (error) {
+    ElMessage.error('加载系统配置失败')
+  }
+}
+
+const showAddUserDialog = () => {
+  isEditUser.value = false
+  Object.assign(userForm, {
+    id: null,
+    username: '',
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    roleId: null
+  })
+  userDialogVisible.value = true
+}
+
+const editUser = (user) => {
+  isEditUser.value = true
+  Object.assign(userForm, {
+    id: user.id,
+    username: user.username,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    password: '',
+    roleId: user.roleId
+  })
+  userDialogVisible.value = true
+}
+
+const saveUser = async () => {
+  try {
+    await userFormRef.value.validate()
+    
+    if (isEditUser.value) {
+      await adminAPI.updateUser(userForm.id, userForm)
+      ElMessage.success('用户更新成功')
+    } else {
+      await adminAPI.createUser(userForm)
+      ElMessage.success('用户创建成功')
+    }
+    
+    userDialogVisible.value = false
+    loadUsers()
+  } catch (error) {
+    if (error.message) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
+const deleteUser = async (user) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除用户 "${user.username}" 吗？`, '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await adminAPI.deleteUser(user.id)
+    ElMessage.success('用户删除成功')
+    loadUsers()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除用户失败')
+    }
+  }
+}
+
+const toggleUserStatus = async (user) => {
+  try {
+    await adminAPI.toggleUserStatus(user.id, !user.enabled)
+    ElMessage.success(`用户${user.enabled ? '禁用' : '启用'}成功`)
+    loadUsers()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+
+const resetPassword = (user) => {
+  resetPasswordForm.userId = user.id
+  resetPasswordForm.newPassword = ''
+  resetPasswordDialogVisible.value = true
+}
+
+const confirmResetPassword = async () => {
+  if (!resetPasswordForm.newPassword || resetPasswordForm.newPassword.length < 8) {
+    ElMessage.error('密码长度至少8位')
+    return
+  }
+  
+  try {
+    await adminAPI.resetUserPassword(resetPasswordForm.userId, resetPasswordForm.newPassword)
+    ElMessage.success('密码重置成功')
+    resetPasswordDialogVisible.value = false
+  } catch (error) {
+    ElMessage.error('密码重置失败')
+  }
+}
+
+const showAddRoleDialog = () => {
+  isEditRole.value = false
+  Object.assign(roleForm, {
+    id: null,
+    roleName: '',
+    description: ''
+  })
+  roleDialogVisible.value = true
+}
+
+const editRole = (role) => {
+  isEditRole.value = true
+  Object.assign(roleForm, {
+    id: role.id,
+    roleName: role.roleName,
+    description: role.description
+  })
+  roleDialogVisible.value = true
+}
+
+const saveRole = async () => {
+  try {
+    await roleFormRef.value.validate()
+    
+    if (isEditRole.value) {
+      await adminAPI.updateRole(roleForm.id, roleForm)
+      ElMessage.success('角色更新成功')
+    } else {
+      await adminAPI.createRole(roleForm)
+      ElMessage.success('角色创建成功')
+    }
+    
+    roleDialogVisible.value = false
+    loadRoles()
+  } catch (error) {
+    if (error.message) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
+const deleteRole = async (role) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除角色 "${role.roleName}" 吗？`, '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await adminAPI.deleteRole(role.id)
+    ElMessage.success('角色删除成功')
+    loadRoles()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除角色失败')
+    }
+  }
+}
+
+const saveSystemConfig = async () => {
+  ElMessage.success('系统配置保存成功')
+}
+
+const getRoleTagType = (roleName) => {
+  const types = {
+    'ADMIN': 'danger',
+    'USER': 'primary',
+    'GUEST': 'info'
+  }
+  return types[roleName] || ''
+}
+
+const formatDate = (date) => {
+  if (!date) return '-'
+  return new Date(date).toLocaleString('zh-CN')
+}
 </script>
 
 <style scoped>
 .admin-dashboard {
-  padding: 24px;
+  height: 100vh;
+  width: 100%;
+}
+
+.admin-sidebar {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-header h2 {
+  color: #fff;
+  font-size: 18px;
+  margin: 0;
+}
+
+.sidebar-menu {
+  border: none;
+  background: transparent;
+}
+
+.sidebar-menu .el-menu-item {
+  color: rgba(255, 255, 255, 0.8);
+  height: 50px;
+  line-height: 50px;
+}
+
+.sidebar-menu .el-menu-item:hover,
+.sidebar-menu .el-menu-item.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.admin-header {
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-left h3 {
+  margin: 0;
+  color: #333;
+}
+
+.user-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.username {
+  font-weight: 500;
+}
+
+.admin-content {
   background: #f5f7fa;
-  min-height: 100vh;
-}
-
-.dashboard-header h1 {
-  margin: 0 0 24px 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.header-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  gap: 20px;
+  padding: 10px;
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  color: #fff;
 }
 
-.stat-icon.blue { background: #e6f0ff; color: #409eff; }
-.stat-icon.green { background: #e6f7ff; color: #13ce66; }
-.stat-icon.orange { background: #fff7e6; color: #ff9800; }
-.stat-icon.red { background: #ffebee; color: #f56c6c; }
+.stat-icon.users {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-icon.active {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.stat-icon.roles {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-icon.logs {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
 
 .stat-info {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
+  color: #666;
+  margin-top: 4px;
 }
 
-.content-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 20px;
-}
-
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+.chart-card {
+  min-height: 300px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
 }
 
-.card-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.chart-container {
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chart-placeholder {
+.overview-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  color: #909399;
+  gap: 15px;
 }
 
-.status-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.status-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-}
-
-.status-label {
-  font-size: 14px;
-  color: #606266;
-}
-
-.user-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.user-item {
+.overview-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  gap: 10px;
 }
 
-.user-item:hover {
-  background: #f5f7fa;
-}
-
-.user-detail {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-size: 14px;
-  color: #303133;
+.overview-item .label {
   font-weight: 500;
+  color: #666;
+  width: 120px;
 }
 
-.user-time {
-  font-size: 12px;
-  color: #909399;
-}
-
-.alerts-list {
+.quick-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.alert-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-}
-
-.alert-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.alert-icon.warning { background: #fff7e6; color: #ff9800; }
-.alert-icon.info { background: #e6f0ff; color: #409eff; }
-.alert-icon.danger { background: #ffebee; color: #f56c6c; }
-
-.alert-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.alert-title {
-  font-size: 14px;
-  color: #303133;
-}
-
-.alert-time {
-  font-size: 12px;
-  color: #909399;
-}
-
-.user-activity {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.system-status {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.recent-users {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.alerts-panel {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-@media (max-width: 1200px) {
-  .header-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card {
-    grid-column: 1 !important;
-    grid-row: auto !important;
-  }
+.quick-actions .el-button {
+  width: 100%;
 }
 </style>

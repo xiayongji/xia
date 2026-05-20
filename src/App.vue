@@ -17,11 +17,8 @@
           mode="vertical"
           @select="handleMenuSelect"
         >
-          <el-menu-item v-if="isAdmin" index="/admin">
-            <el-icon :size="22"><DataBoard /></el-icon>
-            <span v-show="!sidebarCollapsed">管理控制台</span>
-          </el-menu-item>
-          <el-menu-item v-if="!isAdmin" index="/user">
+          <!-- 业务模块：管理员与普通用户均可使用 -->
+          <el-menu-item index="/user">
             <el-icon :size="22"><HomeFilled /></el-icon>
             <span v-show="!sidebarCollapsed">我的主页</span>
           </el-menu-item>
@@ -37,15 +34,12 @@
             <el-icon :size="22"><Lightning /></el-icon>
             <span v-show="!sidebarCollapsed">能耗统计</span>
           </el-menu-item>
-          <el-menu-item v-if="isAdmin" index="/users">
-            <el-icon :size="22"><User /></el-icon>
-            <span v-show="!sidebarCollapsed">用户管理</span>
+          <!-- 仅管理员：用户/角色/日志等管理功能 -->
+          <el-menu-item v-if="isAdmin" index="/admin">
+            <el-icon :size="22"><DataBoard /></el-icon>
+            <span v-show="!sidebarCollapsed">管理控制台</span>
           </el-menu-item>
-          <el-menu-item v-if="isAdmin" index="/admin-settings">
-            <el-icon :size="22"><Tools /></el-icon>
-            <span v-show="!sidebarCollapsed">管理员设置</span>
-          </el-menu-item>
-          <el-menu-item index="/settings">
+          <el-menu-item v-if="isAdmin" index="/settings">
             <el-icon :size="22"><Setting /></el-icon>
             <span v-show="!sidebarCollapsed">系统设置</span>
           </el-menu-item>
@@ -67,7 +61,7 @@
               </el-tag>
             </div>
           </div>
-          <el-button type="text" class="logout-btn" @click.stop="handleLogout">
+          <el-button type="primary" link class="logout-btn" @click.stop="handleLogout">
             <el-icon><TurnOff /></el-icon>
             <span>退出登录</span>
           </el-button>
@@ -114,7 +108,9 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from './stores/auth'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { 
   HomeFilled, 
@@ -138,11 +134,26 @@ const router = useRouter()
 const sidebarCollapsed = ref(false)
 const notificationCount = ref(3)
 
+const authStore = useAuthStore()
+const { token, user, role } = storeToRefs(authStore)
+
 const activeMenu = computed(() => route.path)
-const userName = computed(() => localStorage.getItem('username') || '管理员')
-const hasToken = computed(() => !!localStorage.getItem('token'))
-const userRole = computed(() => localStorage.getItem('role') || 'user')
-const isAdmin = computed(() => userRole.value === 'admin')
+const hasToken = computed(() => !!token.value)
+const userName = computed(() => user.value?.username || localStorage.getItem('username') || '用户')
+const isAdmin = computed(() => role.value === 'admin')
+
+onMounted(() => {
+  authStore.syncFromStorage()
+})
+
+watch(
+  () => route.path,
+  () => {
+    if (localStorage.getItem('token') && !token.value) {
+      authStore.syncFromStorage()
+    }
+  }
+)
 
 const pageTitles = {
   '/dashboard': '设备监控',
@@ -179,17 +190,14 @@ const handleLogout = async () => {
       }
     )
 
-    localStorage.removeItem('token')
-    localStorage.removeItem('username')
-    localStorage.removeItem('role')
-    localStorage.removeItem('user')
+    await authStore.logout()
     localStorage.removeItem('themeColor')
     sessionStorage.clear()
 
     ElMessage.success('退出成功')
 
     setTimeout(() => {
-      window.location.href = '/login'
+      window.location.replace('/login')
     }, 300)
   } catch (error) {
     ElMessage.info('已取消退出')

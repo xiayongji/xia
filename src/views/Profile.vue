@@ -187,17 +187,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { 
   User, CameraFilled, Lock, Checked, Message, PhoneFilled, Key, 
   HelpFilled, ChatLineRound, Headset, ChatSquare, InfoFilled, ArrowRight 
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { userApi } from '../api/user'
 
 const userInfo = reactive({
   username: localStorage.getItem('username') || 'admin',
-  email: 'admin@example.com',
-  phone: '13800138000',
+  email: '',
+  phone: '',
   gender: 'secret',
   birthday: ''
 })
@@ -208,11 +209,34 @@ const passwordForm = ref({
   confirmPassword: ''
 })
 
-const saveInfo = () => {
-  ElMessage.success('个人信息保存成功')
+const loadProfile = async () => {
+  try {
+    const profile = await userApi.getUserInfo()
+    userInfo.username = profile.username || userInfo.username
+    userInfo.email = profile.email || ''
+    userInfo.phone = profile.phone || ''
+    localStorage.setItem('username', userInfo.username)
+    localStorage.setItem('user', JSON.stringify(profile))
+  } catch (error) {
+    console.warn('加载用户信息失败', error)
+  }
 }
 
-const changePassword = () => {
+const saveInfo = async () => {
+  try {
+    await userApi.updateUserInfo({
+      email: userInfo.email,
+      phone: userInfo.phone,
+      fullName: userInfo.username
+    })
+    ElMessage.success('个人信息保存成功')
+    await loadProfile()
+  } catch (error) {
+    ElMessage.error('保存失败')
+  }
+}
+
+const changePassword = async () => {
   if (!passwordForm.value.oldPassword) {
     ElMessage.warning('请输入原密码')
     return
@@ -225,13 +249,23 @@ const changePassword = () => {
     ElMessage.warning('两次输入密码不一致')
     return
   }
-  ElMessage.success('密码修改成功')
-  passwordForm.value = {
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+  try {
+    await userApi.changePassword({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword
+    })
+    ElMessage.success('密码修改成功')
+    passwordForm.value = {
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+  } catch (error) {
+    ElMessage.error(typeof error.response?.data === 'string' ? error.response.data : '密码修改失败')
   }
 }
+
+onMounted(loadProfile)
 
 const openHelp = (type) => {
   const messages = {

@@ -101,9 +101,11 @@ public class UserService {
         
         Map<String, Object> result = new HashMap<>();
         result.put("accessToken", jwt);
+        result.put("token", jwt);
         result.put("refreshToken", refreshToken);
         result.put("tokenType", "Bearer");
         result.put("username", username);
+        result.put("role", user.getRole() != null ? user.getRole().getRoleName() : "ROLE_USER");
         
         log.info("用户登录成功: {}", username);
         return result;
@@ -266,5 +268,143 @@ public class UserService {
      */
     public List<Object[]> getOperationStatistics(LocalDateTime since) {
         return operationLogRepository.countByOperation(since);
+    }
+    
+    /**
+     * 获取所有用户
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+    
+    /**
+     * 根据ID获取用户
+     */
+    public Optional<User> getUserById(Long id) {
+        return userRepository.findById(id);
+    }
+    
+    /**
+     * 创建用户（管理员）
+     */
+    @Transactional
+    public User createUser(String username, String password, String email, String phone, String fullName, Long roleId) {
+        log.info("管理员创建用户: {}", username);
+        
+        if (userRepository.existsByUsername(username)) {
+            throw new RuntimeException("用户名已存在: " + username);
+        }
+        
+        if (email != null && userRepository.existsByEmail(email)) {
+            throw new RuntimeException("邮箱已存在: " + email);
+        }
+        
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(password); // 会在保存前加密
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setFullName(fullName);
+        user.setEnabled(true);
+        user.setCreatedAt(LocalDateTime.now());
+        
+        if (roleId != null) {
+            UserRole role = roleRepository.findById(roleId)
+                    .orElseThrow(() -> new RuntimeException("角色不存在: " + roleId));
+            user.setRole(role);
+        } else {
+            // 默认分配ROLE_USER角色
+            roleRepository.findByRoleName("ROLE_USER").ifPresent(user::setRole);
+        }
+        
+        return userRepository.save(user);
+    }
+    
+    /**
+     * 更新用户（管理员）
+     */
+    @Transactional
+    public User updateUserByAdmin(Long userId, Map<String, Object> userData) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在: " + userId));
+        
+        if (userData.containsKey("email")) {
+            String email = (String) userData.get("email");
+            if (email != null && !email.equals(user.getEmail()) && userRepository.existsByEmail(email)) {
+                throw new RuntimeException("邮箱已存在: " + email);
+            }
+            user.setEmail(email);
+        }
+        
+        if (userData.containsKey("phone")) {
+            user.setPhone((String) userData.get("phone"));
+        }
+        
+        if (userData.containsKey("fullName")) {
+            user.setFullName((String) userData.get("fullName"));
+        }
+        
+        if (userData.containsKey("enabled")) {
+            user.setEnabled((Boolean) userData.get("enabled"));
+        }
+        
+        if (userData.containsKey("roleId")) {
+            Long roleId = ((Number) userData.get("roleId")).longValue();
+            UserRole role = roleRepository.findById(roleId)
+                    .orElseThrow(() -> new RuntimeException("角色不存在: " + roleId));
+            user.setRole(role);
+        }
+        
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    /**
+     * 删除用户
+     */
+    @Transactional
+    public void deleteUser(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+        userRepository.deleteById(userId);
+        log.info("删除用户: {}", userId);
+    }
+    
+    /**
+     * 切换用户状态
+     */
+    @Transactional
+    public User toggleUserStatus(Long userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在: " + userId));
+        user.setEnabled(enabled);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    /**
+     * 重置用户密码
+     */
+    @Transactional
+    public void resetUserPassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在: " + userId));
+        
+        // 验证密码强度
+        validatePasswordStrength(newPassword);
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        
+        log.info("重置用户密码: {}", user.getUsername());
+    }
+    
+    /**
+     * 分页查询用户
+     */
+    public org.springframework.data.domain.Page<User> getUsersPaginated(org.springframework.data.domain.Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
 }

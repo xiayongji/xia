@@ -1,65 +1,58 @@
 server:
-  port: 8082
+  port: 8083
 
 spring:
   application:
     name: scene-service
-  
-  # MySQL 数据库配置
-  datasource:
-    url: jdbc:mysql://localhost:3307/smarthome_scene?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: password
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
-  
-  # Redis 缓存配置
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 6000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
-  
-  jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
   cloud:
     config:
       enabled: false
 
+  # MySQL 数据库配置 (使用Docker MySQL)
+  datasource:
+    url: jdbc:mysql://localhost:5455/smarthome_scene?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: infini_rag_flow
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    instance-id: ${spring.application.name}:${server.port}
-    prefer-ip-address: true
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+# 场景控制配置
+device:
+  service:
+    url: http://localhost:8081
 
 scene:
   execution:
-    async: true
-    timeout: 30000
-  trigger:
-    types: ["time", "device", "environment"]
-  action:
-    types: ["device_control", "notification", "delay"]
-
-drools:
-  enabled: false
+    async-enabled: true
+    thread-pool-size: 10
+  rules:
+    engine: drools
+    drools:
+      rule-files:
+        - rules/scene-rules.drl
 
 logging:
   level:

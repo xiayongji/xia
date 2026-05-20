@@ -72,7 +72,7 @@
           
           <div class="register-link">
             <span>还没有账号?</span>
-            <el-button type="text" @click="goToRegister">立即注册</el-button>
+            <el-button type="primary" link @click="goToRegister">立即注册</el-button>
           </div>
         </el-form>
         
@@ -160,34 +160,10 @@ const handleLogin = async () => {
       try {
         await authStore.login(loginForm.value.username, loginForm.value.password)
         ElMessage.success('登录成功')
-        setTimeout(() => {
-          const role = localStorage.getItem('role')
-          if (role === 'admin') {
-            window.location.href = '/admin'
-          } else {
-            window.location.href = '/user'
-          }
-        }, 500)
+        await router.replace('/user')
       } catch (error) {
-        if (loginForm.value.username && loginForm.value.password) {
-          const mockToken = 'mock-token-' + Date.now()
-          const isAdmin = loginForm.value.username.toLowerCase().includes('admin')
-          const role = isAdmin ? 'admin' : 'user'
-          localStorage.setItem('token', mockToken)
-          localStorage.setItem('username', loginForm.value.username)
-          localStorage.setItem('role', role)
-          localStorage.setItem('user', JSON.stringify({ username: loginForm.value.username, role }))
-          ElMessage.success('登录成功')
-          setTimeout(() => {
-            if (role === 'admin') {
-              window.location.href = '/admin'
-            } else {
-              window.location.href = '/user'
-            }
-          }, 500)
-        } else {
-          ElMessage.error('登录失败，请输入用户名和密码')
-        }
+        const message = error.response?.data || error.message || '登录失败，请检查用户名和密码'
+        ElMessage.error(typeof message === 'string' ? message : '登录失败，请检查用户名和密码')
       } finally {
         loading.value = false
       }

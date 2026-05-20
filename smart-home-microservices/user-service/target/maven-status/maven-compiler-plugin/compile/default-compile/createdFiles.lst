@@ -1,7 +1,6 @@
 com\smarthome\user\security\JwtAuthenticationFilter.class
 com\smarthome\user\service\RbacService.class
 com\smarthome\user\entity\OperationLog.class
-com\smarthome\user\service\UserDetailsServiceImpl.class
 com\smarthome\user\entity\UserRole.class
 com\smarthome\user\repository\RoleRepository.class
 com\smarthome\user\entity\UserPermission.class
@@ -9,7 +8,6 @@ com\smarthome\user\repository\UserRepository.class
 com\smarthome\user\entity\User.class
 com\smarthome\user\controller\RbacController.class
 com\smarthome\user\service\UserService.class
-com\smarthome\user\entity\UserSettings.class
 com\smarthome\user\controller\UserController.class
 com\smarthome\user\repository\OperationLogRepository.class
 com\smarthome\user\security\JwtAuthenticationEntryPoint.class

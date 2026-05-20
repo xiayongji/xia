@@ -149,9 +149,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, markRaw } from 'vue'
 import * as echarts from 'echarts'
+import { analyticsApi } from '../api/analytics'
 import { Lightning, WalletFilled, TrendCharts, Trophy, Sunny, Clock, WindPower, HotWater } from '@element-plus/icons-vue'
+
+const trendDataFromApi = ref(null)
+const hasApiTrend = ref(false)
 
 const timeRange = ref('month')
 const chartRef = ref(null)
@@ -183,7 +187,7 @@ const deviceEnergyRanking = ref([
 const energyTips = ref([
   {
     id: '1',
-    icon: HotWater,
+    icon: markRaw(HotWater),
     title: '优化空调温度',
     description: '夏季设置在26°C，冬季设置在20°C，可节省约15%的能耗',
     savings: '15%',
@@ -191,7 +195,7 @@ const energyTips = ref([
   },
   {
     id: '2',
-    icon: Clock,
+    icon: markRaw(Clock),
     title: '定时关闭设备',
     description: '设置智能定时，自动关闭待机设备，避免待机能耗',
     savings: '8%',
@@ -199,7 +203,7 @@ const energyTips = ref([
   },
   {
     id: '3',
-    icon: Sunny,
+    icon: markRaw(Sunny),
     title: '利用自然光',
     description: '白天尽量使用自然光照明，减少人工光源使用',
     savings: '12%',
@@ -207,7 +211,7 @@ const energyTips = ref([
   },
   {
     id: '4',
-    icon: WindPower,
+    icon: markRaw(WindPower),
     title: '使用节能模式',
     description: '开启家电的节能模式，在保证使用体验的同时降低能耗',
     savings: '10%',
@@ -222,7 +226,60 @@ const getRankClass = (index) => {
   return ''
 }
 
+const loadEnergyFromBackend = async () => {
+  try {
+    const today = await analyticsApi.getTodayEnergy()
+    if (today) {
+      currentPeriodEnergy.value = Number(today.totalEnergy ?? today.energy ?? currentPeriodEnergy.value)
+      currentPeriodCost.value = Number(today.totalCost ?? today.cost ?? currentPeriodCost.value)
+      avgDailyEnergy.value = Number(today.avgDailyEnergy ?? today.average ?? avgDailyEnergy.value)
+      savedEnergy.value = Number(today.savedEnergy ?? savedEnergy.value)
+    }
+
+    const daysMap = { day: 1, week: 7, month: 30, year: 365 }
+    const trend = await analyticsApi.getEnergyTrend(daysMap[timeRange.value] || 7)
+    if (Array.isArray(trend) && trend.length > 0) {
+      hasApiTrend.value = true
+      trendDataFromApi.value = trend.map(item => ({
+        time: item.date || item.day || item.label || item.time,
+        energy: Number(item.energy ?? item.totalEnergy ?? item.value ?? 0),
+        cost: Number(item.cost ?? item.totalCost ?? (Number(item.energy ?? 0) * 0.5))
+      }))
+    }
+
+    const ranking = await analyticsApi.getHighEnergyDevices(5)
+    if (Array.isArray(ranking) && ranking.length > 0) {
+      const total = ranking.reduce((sum, item) => sum + Number(item.energy ?? item.totalEnergy ?? 0), 0) || 1
+      const colors = [
+        'linear-gradient(90deg, #3B82F6 0%, #1D4ED8 100%)',
+        'linear-gradient(90deg, #8B5CF6 0%, #7C3AED 100%)',
+        'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+        'linear-gradient(90deg, #F59E0B 0%, #D97706 100%)',
+        'linear-gradient(90deg, #94A3B8 0%, #64748B 100%)'
+      ]
+      deviceEnergyRanking.value = ranking.map((item, index) => {
+        const energy = Number(item.energy ?? item.totalEnergy ?? 0)
+        return {
+          name: item.deviceName || item.name || item.deviceId || `设备${index + 1}`,
+          energy: energy.toFixed(1),
+          percentage: Math.round((energy / total) * 100),
+          color: colors[index % colors.length]
+        }
+      })
+    }
+    updateChart()
+  } catch {
+    // 后端不可用时保留本地演示数据
+  }
+}
+
 const generateChartData = () => {
+  if (trendDataFromApi.value?.length) {
+    return trendDataFromApi.value
+  }
+  if (!hasApiTrend.value) {
+    return []
+  }
   const data = []
   if (timeRange.value === 'day') {
     for (let i = 0; i < 24; i++) {
@@ -375,12 +432,13 @@ const updateChart = () => {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
   chart = echarts.init(chartRef.value)
+  await loadEnergyFromBackend()
   updateChart()
-  
+
   window.addEventListener('resize', () => {
-    chart.resize()
+    chart?.resize()
   })
 })
 
@@ -393,9 +451,11 @@ onUnmounted(() => {
   })
 })
 
-watch(timeRange, () => {
+watch(timeRange, async () => {
+  trendDataFromApi.value = null
+  await loadEnergyFromBackend()
   updateChart()
-  
+
   if (timeRange.value === 'day') {
     currentPeriodEnergy.value = 5.2
     currentPeriodCost.value = 2.6

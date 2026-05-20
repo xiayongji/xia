@@ -9,9 +9,16 @@ server:
 spring:
   application:
     name: api-gateway
-  
+
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
       routes:
         - id: device-service
           uri: http://localhost:8081
@@ -19,25 +26,53 @@ spring:
             - Path=/api/devices/**
           filters:
             - StripPrefix=0
-        
+
         - id: scene-service
-          uri: http://localhost:8082
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/scene/**
+          filters:
+            - StripPrefix=0
+
+        - id: scene-service-legacy
+          uri: http://localhost:8083
           predicates:
             - Path=/api/scenes/**
           filters:
-            - StripPrefix=0
-        
+            - RewritePath=/api/scenes(?<segment>/?.*), /api/scene/scenes$\{segment}
+
         - id: user-service
-          uri: http://localhost:8083
+          uri: http://localhost:8082
           predicates:
             - Path=/api/user/**
           filters:
             - StripPrefix=0
-        
+
+        - id: admin-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - StripPrefix=0
+
         - id: analytics-service
-          uri: http://localhost:8084
+          uri: http://localhost:8085
           predicates:
             - Path=/api/analytics/**
+          filters:
+            - StripPrefix=0
+
+        - id: energy-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/energy/**
+          filters:
+            - StripPrefix=0
+
+        - id: edge-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/edge/**
           filters:
             - StripPrefix=0
 
@@ -47,5 +82,5 @@ eureka:
 
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
     org.springframework.web: INFO

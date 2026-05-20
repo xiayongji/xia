@@ -1,49 +1,80 @@
 server:
   port: 8084
-  http2:
-    enabled: true
 
 spring:
   application:
     name: edge-service
+  http2:
+    enabled: true
   
-  datasource:
-    url: jdbc:h2:mem:edgedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
-  
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-  
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-
+  # Redis 缓存配置
   data:
     redis:
       host: localhost
       port: 6379
+      # password: your_redis_password  # 如果设置了密码取消注释
+      database: 0
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  # MySQL 数据库配置 (与 Docker MySQL 端口 5455 一致)
+  datasource:
+    url: jdbc:mysql://localhost:5455/smarthome_edge?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: infini_rag_flow
+    hikari:
+      # 连接池大小优化
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # 连接测试
+      connection-test-query: SELECT 1
+      # 性能优化
+      auto-commit: true
+      pool-name: EdgeServiceHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        # 性能优化
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        # 二级缓存
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
 
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
 
 grpc:
   server:
-    port: 9090
+    port: 9094
 
 logging:
   level:
     com.smarthome.edge: DEBUG
     org.springframework.web: INFO
+    org.hibernate.SQL: WARN
+    com.zaxxer.hikari: INFO
 
 springdoc:
   api-docs:
@@ -56,3 +87,12 @@ edge:
     frequency: 10000
   command:
     min-interval: 50
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

@@ -1,3 +1,4 @@
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\repository\DeviceRepository.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\StatusBatchSyncRequest.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\java\com\smarthome\edge\grpc\SyncResponseOrBuilder.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\java\com\smarthome\edge\grpc\DeviceStatusResponse.java
@@ -22,7 +23,10 @@ C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\grpc-java\com\smarthome\edge\grpc\DeviceControlServiceGrpc.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\CloudSyncService.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\java\com\smarthome\edge\grpc\DeviceResponse.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\repository\DeviceStatusRepository.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\java\com\smarthome\edge\grpc\DeviceStatusRequest.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\java\com\smarthome\edge\grpc\EmptyOrBuilder.java
+C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\target\generated-sources\protobuf\java\com\smarthome\edge\grpc\Empty.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\CloudCommandRequest.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\LocalDeviceManager.java
 C:\Users\user\Desktop\毕业设计\smart-home-microservices\edge-service\src\main\java\com\smarthome\edge\EdgeServiceApplication.java

@@ -1,127 +1,138 @@
 package com.smarthome.scene.controller;
 
+import com.smarthome.scene.dto.SceneRequest;
 import com.smarthome.scene.entity.Scene;
-import com.smarthome.scene.service.SceneService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
+import com.smarthome.scene.entity.SceneExecution;
+import com.smarthome.scene.entity.SceneRule;
+import com.smarthome.scene.service.SceneExecutionService;
+import com.smarthome.scene.service.SceneManagementService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
-/**
- * 场景控制控制器
- * 提供场景管理、执行等REST API
- */
-@Slf4j
 @RestController
-@RequestMapping("/api/scenes")
-@RequiredArgsConstructor
+@RequestMapping("/api/scene")
+@CrossOrigin(origins = "*")
 public class SceneController {
-    
-    private final SceneService sceneService;
-    
-    /**
-     * 创建场景
-     */
-    @PostMapping
-    public ResponseEntity<?> createScene(@RequestBody Scene scene) {
-        try {
-            Scene createdScene = sceneService.createScene(scene);
-            return new ResponseEntity<>(createdScene, HttpStatus.CREATED);
-        } catch (Exception e) {
-            log.error("场景创建失败: {}", e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
+
+    @Autowired
+    private SceneManagementService sceneManagementService;
+
+    @Autowired
+    private SceneExecutionService sceneExecutionService;
+
+    @PostMapping("/scenes")
+    public ResponseEntity<Scene> createScene(@RequestBody SceneRequest request) {
+        Scene created = sceneManagementService.createScene(request.toEntity());
+        return ResponseEntity.ok(created);
     }
-    
-    /**
-     * 获取所有场景
-     */
-    @GetMapping
+
+    @GetMapping("/scenes")
     public ResponseEntity<List<Scene>> getAllScenes() {
-        List<Scene> scenes = sceneService.getAllScenes();
-        return new ResponseEntity<>(scenes, HttpStatus.OK);
+        List<Scene> scenes = sceneManagementService.getAllScenes();
+        return ResponseEntity.ok(scenes);
     }
-    
-    /**
-     * 获取启用的场景
-     */
-    @GetMapping("/active")
-    public ResponseEntity<List<Scene>> getActiveScenes() {
-        List<Scene> scenes = sceneService.getActiveScenes();
-        return new ResponseEntity<>(scenes, HttpStatus.OK);
+
+    @GetMapping("/scenes/{id}")
+    public ResponseEntity<Scene> getScene(@PathVariable Long id) {
+        Scene scene = sceneManagementService.getScene(id);
+        return ResponseEntity.ok(scene);
     }
-    
-    /**
-     * 获取场景详情
-     */
-    @GetMapping("/{sceneId}")
-    public ResponseEntity<Scene> getScene(@PathVariable String sceneId) {
-        Optional<Scene> scene = sceneService.getScene(sceneId);
-        return scene.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+
+    @PutMapping("/scenes/{id}")
+    public ResponseEntity<Scene> updateScene(@PathVariable Long id, @RequestBody SceneRequest request) {
+        Scene updated = sceneManagementService.updateScene(id, request.toEntity());
+        return ResponseEntity.ok(updated);
     }
-    
-    /**
-     * 更新场景
-     */
-    @PutMapping("/{sceneId}")
-    public ResponseEntity<?> updateScene(@PathVariable String sceneId, @RequestBody Scene scene) {
-        try {
-            scene.setSceneId(sceneId);
-            Scene updatedScene = sceneService.updateScene(scene);
-            return new ResponseEntity<>(updatedScene, HttpStatus.OK);
-        } catch (Exception e) {
-            log.error("场景更新失败: {}", e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
+
+    @DeleteMapping("/scenes/{id}")
+    public ResponseEntity<Void> deleteScene(@PathVariable Long id) {
+        sceneManagementService.deleteScene(id);
+        return ResponseEntity.ok().build();
     }
-    
-    /**
-     * 切换场景状态
-     */
-    @PutMapping("/{sceneId}/toggle")
-    public ResponseEntity<Void> toggleScene(@PathVariable String sceneId, @RequestParam boolean enabled) {
-        sceneService.toggleScene(sceneId, enabled);
-        return new ResponseEntity<>(HttpStatus.OK);
+
+    @GetMapping("/scenes/user/{userId}")
+    public ResponseEntity<List<Scene>> getScenesByUser(@PathVariable Long userId) {
+        List<Scene> scenes = sceneManagementService.getScenesByUser(userId);
+        return ResponseEntity.ok(scenes);
     }
-    
-    /**
-     * 执行场景
-     */
-    @PostMapping("/{sceneId}/execute")
-    public ResponseEntity<?> executeScene(@PathVariable String sceneId,
-                                         @RequestParam(required = false) String triggerType,
-                                         @RequestParam(required = false) String triggerCondition) {
-        try {
-            sceneService.executeScene(sceneId, 
-                triggerType != null ? triggerType : "manual", 
-                triggerCondition != null ? triggerCondition : "");
-            return new ResponseEntity<>("场景执行已启动", HttpStatus.OK);
-        } catch (Exception e) {
-            log.error("场景执行失败: {}", e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+
+    @PutMapping("/scenes/{id}/toggle")
+    public ResponseEntity<Scene> toggleScene(@PathVariable Long id, @RequestParam Boolean enabled) {
+        Scene scene = sceneManagementService.toggleScene(id, enabled);
+        return ResponseEntity.ok(scene);
     }
-    
-    /**
-     * 删除场景
-     */
-    @DeleteMapping("/{sceneId}")
-    public ResponseEntity<Void> deleteScene(@PathVariable String sceneId) {
-        sceneService.deleteScene(sceneId);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+    @PostMapping("/scenes/{id}/execute")
+    public ResponseEntity<SceneExecution> executeScene(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "MANUAL") String triggerType,
+            @RequestParam(defaultValue = "ROLE_USER") String triggerSource) {
+
+        SceneExecution execution = sceneExecutionService.executeScene(id, triggerType, triggerSource);
+        return ResponseEntity.ok(execution);
     }
-    
-    /**
-     * 检查触发条件
-     */
-    @PostMapping("/trigger/check")
-    public ResponseEntity<Boolean> checkTriggerCondition(@RequestBody String condition) {
-        boolean result = sceneService.checkTriggerCondition(condition);
-        return new ResponseEntity<>(result, HttpStatus.OK);
+
+    @GetMapping("/scenes/{id}/executions")
+    public ResponseEntity<List<SceneExecution>> getSceneExecutions(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        List<SceneExecution> executions = sceneExecutionService.getExecutionHistory(id, limit);
+        return ResponseEntity.ok(executions);
+    }
+
+    @GetMapping("/scenes/{id}/statistics")
+    public ResponseEntity<Map<String, Object>> getSceneStatistics(@PathVariable Long id) {
+        Map<String, Object> statistics = sceneExecutionService.getSceneStatistics(id);
+        return ResponseEntity.ok(statistics);
+    }
+
+    @PostMapping("/scenes/{id}/rules")
+    public ResponseEntity<SceneRule> addRule(
+            @PathVariable Long id,
+            @RequestBody SceneRule rule) {
+
+        SceneRule created = sceneManagementService.addRuleToScene(id, rule);
+        return ResponseEntity.ok(created);
+    }
+
+    @GetMapping("/scenes/{id}/rules")
+    public ResponseEntity<List<SceneRule>> getSceneRules(@PathVariable Long id) {
+        List<SceneRule> rules = sceneManagementService.getRulesForScene(id);
+        return ResponseEntity.ok(rules);
+    }
+
+    @PutMapping("/rules/{ruleId}")
+    public ResponseEntity<SceneRule> updateRule(
+            @PathVariable Long ruleId,
+            @RequestBody SceneRule rule) {
+
+        SceneRule updated = sceneManagementService.updateRule(ruleId, rule);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/rules/{ruleId}")
+    public ResponseEntity<Void> deleteRule(@PathVariable Long ruleId) {
+        sceneManagementService.removeRule(ruleId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/scenes/search")
+    public ResponseEntity<List<Scene>> searchScenes(@RequestParam String keyword) {
+        List<Scene> scenes = sceneManagementService.searchScenes(keyword);
+        return ResponseEntity.ok(scenes);
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        return ResponseEntity.ok(Map.of(
+                "status", "UP",
+                "service", "scene-service",
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 }

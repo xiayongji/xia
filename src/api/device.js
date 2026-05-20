@@ -2,7 +2,7 @@ import api from './api'
 
 export const deviceApi = {
   getDevices() {
-    return api.get('/devices')
+    return api.get('/devices/with-status')
   },
   
   getDevice(id) {
@@ -22,11 +22,15 @@ export const deviceApi = {
   },
   
   controlDevice(id, command) {
-    return api.post(`/devices/${id}/control`, command)
+    return api.post(`/devices/${id}/command`, command)
   },
   
   getDeviceStatus(id) {
     return api.get(`/devices/${id}/status`)
+  },
+  
+  updateDeviceStatus(id, status) {
+    return api.put(`/devices/${id}/status`, { status })
   },
   
   getDeviceShadow(id) {

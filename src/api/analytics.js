@@ -1,31 +1,59 @@
 import api from './api'
 
 export const analyticsApi = {
-  getEnergyStatistics(params) {
-    return api.get('/analytics/energy', { params })
+  getTodayEnergy() {
+    return api.get('/analytics/energy/today')
   },
-  
-  getEnergyByDevice(deviceId, params) {
-    return api.get(`/analytics/energy/device/${deviceId}`, { params })
+
+  getEnergyStatistics(startTime, endTime) {
+    return api.get('/analytics/energy/stats', {
+      params: { startTime, endTime }
+    })
   },
-  
-  getEnergyTrend(params) {
-    return api.get('/analytics/energy/trend', { params })
+
+  getEnergyByDevice(deviceId, startTime, endTime) {
+    return api.get(`/analytics/energy/device/${deviceId}`, {
+      params: { startTime, endTime }
+    })
   },
-  
-  getAnomalyDetection(params) {
-    return api.get('/analytics/anomaly', { params })
+
+  getEnergyTrend(days = 7) {
+    return api.get('/analytics/energy/trend', { params: { days } })
   },
-  
+
+  getHighEnergyDevices(limit = 5) {
+    return api.get('/analytics/energy/high-energy-devices', { params: { limit } })
+  },
+
+  getPendingAnomalies() {
+    return api.get('/analytics/anomaly/pending')
+  },
+
+  getAnomalyStats() {
+    return api.get('/analytics/anomaly/stats')
+  },
+
   resolveAnomaly(id) {
-    return api.post(`/analytics/anomaly/${id}/resolve`)
+    return api.put(`/analytics/anomaly/${id}/resolve`)
   },
-  
-  getUserBehavior(params) {
-    return api.get('/analytics/behavior', { params })
+
+  getUserBehaviorStats(userId) {
+    return api.get(`/analytics/behavior/user/${userId}/stats`)
   },
-  
+
   getUserBehaviorPatterns(userId) {
-    return api.get(`/analytics/behavior/patterns/${userId}`)
+    return api.get(`/analytics/behavior/user/${userId}/patterns`)
+  },
+
+  recordEnergy(data) {
+    return api.post('/analytics/energy', data)
+  },
+
+  recordBehavior(data) {
+    return api.post('/analytics/behavior', data)
+  },
+
+  getSceneRecommendations(userId, limit = 4) {
+    return api.get(`/analytics/recommend/scenes/${userId}`, { params: { limit } })
   }
 }

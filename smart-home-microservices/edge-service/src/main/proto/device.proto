@@ -48,8 +48,12 @@ message SyncResponse {
     int64 sync_time = 3;
 }
 
+message Empty {
+}
+
 service DeviceControlService {
     rpc ExecuteCommand(DeviceRequest) returns (DeviceResponse);
     rpc GetDeviceStatus(DeviceStatusRequest) returns (DeviceStatusResponse);
     rpc SyncDeviceState(SyncRequest) returns (SyncResponse);
+    rpc GetAllDeviceStatuses(Empty) returns (DeviceStatusResponse);
 }

@@ -1,200 +1,337 @@
-# 智能家居微服务系统
+# 智能家居管理系统
 
 ## 项目简介
 
-本项目是一个完整的智能家居微服务系统，采用微服务架构设计，包含设备管理、场景控制、用户服务和数据分析四大核心模块。系统采用Spring Boot 3.x + Spring Cloud微服务架构，前端采用Vue 3.x + Element Plus开发。
+这是一个功能完整的智能家居管理系统，采用前后端分离架构，前端使用 Vue 3 + Element Plus 构建。
 
-## 系统架构
+## 技术栈
 
-### 微服务模块划分
-1. **设备管理服务** (device-service) - 端口8081
-2. **场景控制服务** (scene-service) - 端口8082
-3. **用户服务** (user-service) - 端口8083
-4. **数据分析服务** (analytics-service) - 端口8084
-5. **API网关** (gateway) - 端口8080
-6. **服务注册中心** (registry) - 端口8761
-7. **配置中心** (config) - 端口8888
+### 前端
+- **Vue 3** - 渐进式 JavaScript 框架
+- **Vue Router** - Vue.js 官方路由管理器
+- **Pinia** - 状态管理库
+- **Element Plus** - 基于 Vue 3 的 UI 组件库
+- **Axios** - HTTP 请求库
+- **ECharts** - 数据可视化图表库
+- **Socket.io** - 实时通信库
 
-### 技术栈
-- **后端框架**: Spring Boot 3.2.0 + Spring Cloud 2023.0.0
-- **前端框架**: Vue 3.x + Element Plus
-- **数据库**: MySQL 8.0 + Redis 7.0
-- **消息队列**: RabbitMQ
-- **安全认证**: Spring Security + JWT
-- **规则引擎**: Drools
-- **机器学习**: TensorFlow + DeepLearning4j
+### 后端（微服务架构）
+- **Spring Boot** - Java 微服务框架
+- **Spring Cloud** - 微服务架构解决方案
+- **MySQL** - 关系型数据库
+- **Redis** - 缓存数据库
+- **RabbitMQ** - 消息队列
 
-## 核心功能模块
+## 系统功能
 
-### 1. 设备管理模块
-- **多协议设备统一接入**：支持WiFi、蓝牙、ZigBee等不同通讯协议
-- **设备注册与鉴权**：设备身份验证和安全接入
-- **状态监控与同步**：设备心跳机制和影子技术
-- **实时控制**：设备远程控制和状态查询
+### 1. 用户认证系统
 
-### 2. 场景控制模块
-- **智能场景联动**：基于条件触发器和动作编排器
-- **规则引擎**：动态配置和热更新场景规则
-- **异步处理**：确保场景执行的实时性和可靠性
-- **图形化界面**：直观的场景配置界面
+#### 1.1 用户注册
+- 支持用户名、邮箱、密码注册
+- 密码强度验证
+- 邮箱格式验证
+- 注册成功后自动登录
 
-### 3. 用户服务模块
-- **安全认证**：Spring Security + JWT认证授权机制
-- **权限管理**：RBAC模型支持角色权限动态配置
-- **个性化设置**：主题切换、设备分组、场景偏好
-- **操作审计**：完整的操作日志记录和审计功能
+#### 1.2 用户登录
+- 用户名/邮箱 + 密码登录
+- Token 身份认证
+- 记住登录状态
+- 登录后根据角色自动跳转
 
-### 4. 数据分析模块
-- **能耗统计**：基于时序分析的能耗模式识别
-- **异常检测**：LSTM神经网络实现设备故障预警
-- **用户行为分析**：聚类算法识别用户使用模式
-- **分层存储**：Redis + MySQL分层存储策略
+#### 1.3 角色权限
+- **管理员 (admin)**：系统管理功能
+- **普通用户 (user)**：基础智能家居控制功能
+- 基于角色的路由访问控制
+
+### 2. 设备监控与控制
+
+#### 2.1 设备列表
+- 实时显示所有设备状态
+- 设备分类：照明、空调、家电、传感器、门锁等
+- 设备状态指示：在线(绿色)、离线(灰色)、警告(橙色)
+
+#### 2.2 设备控制
+- 设备开关控制
+- 设备状态实时更新
+- 设备状态持久化（localStorage + 后端数据库）
+- **功能**：用户更改设备状态后，状态会保存并在页面切换后保持
+
+#### 2.3 设备统计
+- 设备总数统计
+- 在线设备数量
+- 离线设备数量
+- 警告设备数量
+
+#### 2.4 添加设备
+- 支持添加新设备
+- 选择设备类型
+- 配置设备名称和参数
+
+### 3. 智能场景管理
+
+#### 3.1 场景列表
+- 展示所有已创建的场景
+- 场景图标和颜色自定义
+- 场景启用/禁用开关
+
+#### 3.2 场景创建
+- 创建新的智能场景
+- 配置场景名称和描述
+- 添加设备动作（开/关/调亮/调暗）
+- 设置触发时间（可选）
+
+#### 3.3 场景编辑
+- 修改已有场景
+- 更新设备动作
+- 调整场景参数
+
+#### 3.4 场景删除
+- 删除不需要的场景
+- **功能**：删除前有确认提示，删除后刷新不会再次出现
+
+#### 3.5 场景触发
+- 手动触发场景执行
+- 自动按顺序执行所有设备动作
+- 操作结果实时反馈
+
+#### 3.6 快捷操作
+- **全部开启**：开启所有设备
+- **全部关闭**：关闭所有设备
+- **打开灯光**：开启所有照明设备
+- **开启空调**：开启所有空调设备
+
+#### 3.7 场景持久化
+- 场景数据保存到后端数据库
+- 后端服务不可用时自动切换到 localStorage
+- 场景删除后不会再次出现
+
+### 4. 能源管理
+
+#### 4.1 能耗统计
+- 实时能耗数据展示
+- 支持时间范围选择：今日/本周/本月/本年
+- 能耗单位：kWh
+- 费用统计：元
+
+#### 4.2 能耗对比
+- 与昨日/上月同期对比
+- 节能效果展示
+- 环比/同比分析
+
+#### 4.3 能耗趋势图表
+- 折线图展示能耗变化趋势
+- 能耗与费用双Y轴展示
+- 图表交互：缩放、拖拽、数据点查看
+
+#### 4.4 设备能耗排行
+- 按能耗排序展示设备
+- 能耗占比可视化
+- 识别高耗能设备
+
+#### 4.5 节能建议
+- 基于能耗分析的智能建议
+- 个性化节能方案推荐
+
+#### 4.6 设备类型能耗
+- 照明设备能耗
+- 空调设备能耗
+- 家电设备能耗
+- 其他设备能耗
+
+### 5. 管理员功能
+
+#### 5.1 管理员仪表盘
+- 用户总数统计
+- 设备总数统计
+- 在线用户数
+- 系统健康状态
+
+#### 5.2 用户管理
+- 用户列表展示
+- 用户搜索和筛选
+- 用户状态管理
+- 用户详情查看
+
+#### 5.3 角色权限管理
+- 角色列表
+- 权限配置
+- 角色绑定用户
+
+#### 5.4 操作日志
+- 记录用户操作
+- 日志查询和筛选
+- 操作类型分类
+
+#### 5.5 系统设置
+- 系统参数配置
+- 通知设置
+- 安全设置
+
+### 6. 个人设置
+
+#### 6.1 个人信息
+- 查看个人信息
+- 修改头像
+- 更新联系方式
+
+#### 6.2 密码管理
+- 修改登录密码
+- 密码强度验证
+- 密码修改历史
+
+#### 6.3 偏好设置
+- 界面主题选择
+- 通知偏好
+- 语言设置
+
+## 页面路由
+
+| 路径 | 页面名称 | 访问权限 | 功能描述 |
+|------|---------|---------|----------|
+| `/` | 首页 | 公开 | 重定向到登录页 |
+| `/login` | 登录页 | 公开 | 用户登录 |
+| `/register` | 注册页 | 公开 | 用户注册 |
+| `/dashboard` | 设备监控 | 已登录 | 设备列表和控制 |
+| `/scenes` | 智能场景 | 已登录 | 场景管理 |
+| `/energy` | 能耗统计 | 已登录 | 能源数据分析 |
+| `/settings` | 设置 | 已登录 | 个人设置 |
+| `/profile` | 个人资料 | 已登录 | 个人信息管理 |
+| `/admin` | 管理员面板 | 管理员 | 系统管理 |
+| `/user` | 用户面板 | 普通用户 | 用户专属功能 |
+
+## API 接口
+
+### 设备管理
+- `GET /api/devices` - 获取设备列表
+- `GET /api/devices/:id` - 获取设备详情
+- `POST /api/devices` - 创建设备
+- `PUT /api/devices/:id` - 更新设备
+- `DELETE /api/devices/:id` - 删除设备
+- `POST /api/devices/:id/command` - 设备控制
+- `PUT /api/devices/:id/status` - 更新设备状态
+
+### 场景管理
+- `GET /api/scene/scenes` - 获取场景列表
+- `POST /api/scene/scenes` - 创建场景
+- `PUT /api/scene/scenes/:id` - 更新场景
+- `DELETE /api/scene/scenes/:id` - 删除场景
+
+### 用户管理
+- `POST /api/users/register` - 用户注册
+- `POST /api/users/login` - 用户登录
+- `GET /api/users/profile` - 获取用户信息
+- `PUT /api/users/profile` - 更新用户信息
+
+### 管理员
+- `GET /api/admin/users` - 获取用户列表
+- `PUT /api/admin/users/:id` - 更新用户
+- `DELETE /api/admin/users/:id` - 删除用户
+
+## 数据存储
+
+### 前端存储
+- **localStorage**：
+  - `token` - 用户认证 token
+  - `role` - 用户角色
+  - `username` - 用户名
+  - `deviceStates` - 设备状态缓存
+  - `devices` - 设备列表缓存
+  - `scenes` - 场景列表缓存
+
+### 后端存储
+- **MySQL**：用户数据、设备数据、场景数据、日志数据
+- **Redis**：会话缓存、热点数据缓存
+- **RabbitMQ**：异步任务、消息通知
+
+## 状态管理
+
+### Pinia Store
+- `auth.js` - 认证状态管理
+- `devices.js` - 设备状态管理
+- `scenes.js` - 场景状态管理
+- `settings.js` - 设置状态管理
+
+## 环境配置
+
+### 开发环境
+```bash
+npm install
+npm run dev
+```
+
+### 生产环境
+```bash
+npm run build
+npm run preview
+```
 
 ## 项目结构
 
 ```
-smart-home-microservices/
-├── device-service/          # 设备管理微服务
-│   ├── src/main/java/com/smarthome/device/
-│   │   ├── entity/          # 设备、设备影子、心跳实体
-│   │   ├── adapter/         # 多协议设备适配器
-│   │   ├── service/         # 设备管理业务逻辑
-│   │   └── controller/      # REST API接口
-│   └── src/main/resources/  # 配置文件
-├── scene-service/           # 场景控制微服务
-│   ├── src/main/java/com/smarthome/scene/
-│   │   ├── entity/          # 场景、规则、动作实体
-│   │   ├── service/         # 规则引擎、场景执行
-│   │   └── controller/      # 场景管理API
-│   └── src/main/resources/  # 配置文件
-├── user-service/            # 用户服务微服务
-│   ├── src/main/java/com/smarthome/user/
-│   │   ├── entity/          # 用户、角色、权限实体
-│   │   ├── security/        # 安全认证组件
-│   │   ├── service/         # 用户管理业务逻辑
-│   │   └── controller/      # 用户认证API
-│   └── src/main/resources/  # 配置文件
-├── analytics-service/       # 数据分析微服务
-│   └── pom.xml              # 项目配置
-└── README.md                # 项目说明
-
-frontend/                    # Vue 3前端应用
-├── src/
-│   ├── views/               # 页面组件
-│   │   ├── Dashboard.vue    # 仪表板
-│   │   ├── Login.vue        # 登录页面
-│   │   ├── Register.vue     # 注册页面
-│   │   ├── Profile.vue      # 个人中心
-│   │   ├── Scenes.vue       # 场景管理
-│   │   ├── Energy.vue       # 能耗分析
-│   │   └── Settings.vue     # 系统设置
-│   ├── router/              # 路由配置
-│   ├── App.vue              # 根组件
-│   └── main.js              # 入口文件
-└── package.json             # 前端依赖配置
+src/
+├── api/              # API 接口封装
+│   ├── api.js       # Axios 实例配置
+│   ├── device.js    # 设备相关 API
+│   ├── scene.js     # 场景相关 API
+│   ├── user.js      # 用户相关 API
+│   └── admin.js     # 管理员 API
+├── config/           # 配置文件
+│   └── deviceTypes.js # 设备类型配置
+├── router/          # 路由配置
+│   └── index.js     # 路由定义和守卫
+├── stores/          # Pinia 状态管理
+│   ├── auth.js      # 认证状态
+│   ├── devices.js   # 设备状态
+│   ├── scenes.js    # 场景状态
+│   └── settings.js  # 设置状态
+├── utils/           # 工具函数
+│   ├── deviceHelpers.js # 设备辅助函数
+│   └── permissions.js   # 权限工具
+├── views/           # 页面组件
+│   ├── Login.vue    # 登录页
+│   ├── Register.vue # 注册页
+│   ├── Dashboard.vue # 设备监控页
+│   ├── Scenes.vue   # 智能场景页
+│   ├── Energy.vue   # 能耗统计页
+│   ├── Settings.vue # 设置页
+│   ├── Profile.vue  # 个人资料页
+│   ├── AdminDashboard.vue # 管理员面板
+│   └── UserDashboard.vue # 用户面板
+├── App.vue          # 根组件
+├── main.js         # 应用入口
+└── style.css      # 全局样式
 ```
 
-## 快速开始
+## 功能亮点
 
-### 环境要求
-- **JDK 17+**：Spring Boot 3.x要求
-- **Node.js 16+**：前端开发环境
-- **MySQL 8.0+**：关系型数据库
-- **Redis 7.0+**：缓存和会话存储
-- **RabbitMQ 3.12+**：消息队列
+### 1. 设备状态持久化
+- 用户更改设备状态后，状态会保存到 localStorage 和后端数据库
+- 切换页面或刷新后，设备状态保持不变
+- Dashboard 和 Scenes 页面状态同步
 
-### 前端启动
-```bash
-# 安装依赖
-npm install
+### 2. 场景管理增强
+- 删除场景前有确认提示
+- 场景数据持久化到后端
+- 后端服务不可用时自动切换到本地存储
+- 快捷操作支持批量设备控制
 
-# 启动开发服务器
-npm run dev
-```
+### 3. 响应式设计
+- 适配多种屏幕尺寸
+- 移动端友好布局
+- 暗色/亮色主题支持
 
-### 后端启动（需要Java环境）
-```bash
-# 启动各微服务（按顺序）
-cd smart-home-microservices/device-service && mvn spring-boot:run
-cd smart-home-microservices/scene-service && mvn spring-boot:run
-cd smart-home-microservices/user-service && mvn spring-boot:run
-```
+### 4. 实时状态更新
+- 设备状态变化即时反映
+- 操作结果实时反馈
+- 错误处理和重试机制
 
-## API接口文档
+## 未来扩展
 
-### 设备管理服务
-- `POST /api/device/devices/register` - 注册设备
-- `GET /api/device/devices` - 获取设备列表
-- `PUT /api/device/devices/{id}/status` - 更新设备状态
-- `POST /api/device/devices/{id}/heartbeat` - 处理设备心跳
-
-### 场景控制服务
-- `POST /api/scene/scenes` - 创建场景
-- `GET /api/scene/scenes` - 获取场景列表
-- `POST /api/scene/scenes/{id}/execute` - 执行场景
-- `PUT /api/scene/scenes/{id}/toggle` - 切换场景状态
-
-### 用户服务
-- `POST /api/user/auth/register` - 用户注册
-- `POST /api/user/auth/login` - 用户登录
-- `GET /api/user/users/profile` - 获取用户信息
-- `PUT /api/user/users/settings` - 更新用户设置
-
-### 数据分析服务
-- `GET /api/analytics/energy/today` - 获取今日能耗
-- `GET /api/analytics/device/anomalies` - 获取设备异常
-- `GET /api/analytics/user/behavior` - 分析用户行为
-
-## 系统特性
-
-### 微服务架构优势
-- **服务解耦**：各模块独立部署、独立扩展
-- **弹性伸缩**：根据负载动态调整服务实例
-- **故障隔离**：单个服务故障不影响整体系统
-- **技术异构**：不同服务可采用不同技术栈
-
-### 安全机制
-- **JWT认证**：无状态认证，支持分布式部署
-- **RBAC权限**：灵活的权限管理模型
-- **TLS加密**：保障数据传输安全
-- **操作审计**：完整的操作日志记录
-
-### 性能优化
-- **Redis缓存**：提升查询性能
-- **异步处理**：提高系统吞吐量
-- **分层存储**：优化数据访问效率
-- **负载均衡**：确保服务高可用性
-
-## 当前状态
-
-### ✅ 前端项目
-- **状态**：已成功启动
-- **访问地址**：http://localhost:3000/
-- **功能**：完整的用户界面和模拟数据演示
-
-### ❌ 后端微服务
-- **状态**：需要Java环境支持
-- **问题**：Java环境未安装
-- **解决方案**：安装JDK 17+后即可启动
-
-## 访问方式
-
-1. **前端界面**：http://localhost:3000/
-2. **设备管理API**：http://localhost:8081/api/device/
-3. **场景控制API**：http://localhost:8082/api/scene/
-4. **用户服务API**：http://localhost:8083/api/user/
-
-## 注意事项
-
-- 前端项目已包含完整的模拟数据，可直接体验功能
-- 后端微服务需要Java 17+环境支持
-- 数据库配置需要根据实际环境调整
-- 生产环境部署需要配置SSL证书和防火墙
-
-## 后续开发计划
-
-- [ ] 实现API网关和服务注册中心
-- [ ] 完成数据分析微服务模块
-- [ ] 添加监控和日志系统
-- [ ] 实现容器化部署
-- [ ] 集成CI/CD流水线
+- [ ] 实时设备状态推送（WebSocket）
+- [ ] 设备定时任务
+- [ ] 设备联动规则
+- [ ] 能耗预测分析
+- [ ] 语音控制集成
+- [ ] 移动端 App
+- [ ] 设备固件升级
+- [ ] 多语言国际化

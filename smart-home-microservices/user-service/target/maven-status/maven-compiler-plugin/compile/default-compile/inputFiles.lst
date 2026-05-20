@@ -6,6 +6,8 @@ c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\mai
 c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\service\UserDetailsServiceImpl.java
 c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\repository\UserRepository.java
 c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\service\JwtService.java
+c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\config\DefaultUserInitializer.java
+c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\controller\AdminController.java
 c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\entity\UserSettings.java
 c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\repository\OperationLogRepository.java
 c:\Users\user\Desktop\毕业设计\smart-home-microservices\user-service\src\main\java\com\smarthome\user\entity\OperationLog.java

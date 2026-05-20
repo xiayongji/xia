@@ -29,4 +29,6 @@ public interface OperationLogRepository extends JpaRepository<OperationLog, Long
     
     @Query("SELECT o.operation, COUNT(o) FROM OperationLog o WHERE o.timestamp >= :since GROUP BY o.operation")
     List<Object[]> countByOperation(@Param("since") LocalDateTime since);
+
+    long countByTimestampAfter(LocalDateTime timestamp);
 }

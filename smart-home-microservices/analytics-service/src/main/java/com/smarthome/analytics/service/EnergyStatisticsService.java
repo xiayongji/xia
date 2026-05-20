@@ -56,8 +56,15 @@ public class EnergyStatisticsService {
         Map<String, Object> statistics = new HashMap<>();
         
         Double totalEnergy = energyRepository.sumTotalEnergy(startOfDay, endOfDay);
-        statistics.put("totalEnergy", totalEnergy != null ? totalEnergy : 0.0);
-        
+        double energy = totalEnergy != null ? totalEnergy : 0.0;
+        statistics.put("totalEnergy", energy);
+        statistics.put("energy", energy);
+        statistics.put("totalCost", energy * 0.5);
+        statistics.put("cost", energy * 0.5);
+        statistics.put("avgDailyEnergy", energy);
+        statistics.put("average", energy);
+        statistics.put("savedEnergy", Math.max(0, 15.0 - energy * 0.1));
+
         List<Object[]> deviceStats = energyRepository.sumEnergyByDevice(startOfDay, endOfDay);
         List<Map<String, Object>> deviceEnergyList = new ArrayList<>();
         for (Object[] row : deviceStats) {
@@ -134,7 +141,10 @@ public class EnergyStatisticsService {
             
             Map<String, Object> stat = new HashMap<>();
             stat.put("deviceId", row[0]);
+            stat.put("deviceName", row[0]);
+            stat.put("name", row[0]);
             stat.put("totalEnergy", row[1]);
+            stat.put("energy", row[1]);
             result.add(stat);
             count++;
         }

@@ -55,7 +55,8 @@ try {
     $addDevice = Invoke-WebRequest -Uri http://localhost:8080/api/devices -Method POST -Body '{"name":"测试灯","type":"照明","protocol":"wifi"}' -ContentType "application/json" -Headers @{Authorization="Bearer $token"} -UseBasicParsing
     Write-Host "状态: " $addDevice.StatusCode -ForegroundColor Green
     $newDevice = $addDevice.Content | ConvertFrom-Json
-    $deviceId = $newDevice.id
+    $deviceId = $newDevice.deviceId
+    if (-not $deviceId) { $deviceId = $newDevice.id }
     Write-Host "设备ID: " $deviceId -ForegroundColor White
 } catch {
     Write-Host "状态: 失败 - $_" -ForegroundColor Red
@@ -76,7 +77,7 @@ Write-Host "========================================" -ForegroundColor Yellow
 
 Write-Host "`n3.1 获取场景列表:" -ForegroundColor White
 try {
-    $scenes = Invoke-WebRequest -Uri http://localhost:8080/api/scenes -Headers @{Authorization="Bearer $token"} -UseBasicParsing
+    $scenes = Invoke-WebRequest -Uri http://localhost:8080/api/scene/scenes -Headers @{Authorization="Bearer $token"} -UseBasicParsing
     Write-Host "状态: " $scenes.StatusCode -ForegroundColor Green
     $sceneList = $scenes.Content | ConvertFrom-Json
     Write-Host "场景数量: " $sceneList.Count -ForegroundColor White
@@ -113,8 +114,8 @@ try {
 Write-Host "`n=== 测试完成 ===" -ForegroundColor Cyan
 Write-Host "`n服务状态汇总:" -ForegroundColor White
 Write-Host "API网关:     http://localhost:8080" -ForegroundColor Green
-Write-Host "用户服务:    http://localhost:8083" -ForegroundColor Green
+Write-Host "用户服务:    http://localhost:8082" -ForegroundColor Green
 Write-Host "设备服务:    http://localhost:8081" -ForegroundColor Green
-Write-Host "场景服务:    http://localhost:8082" -ForegroundColor Green
-Write-Host "数据分析:    http://localhost:8084" -ForegroundColor Green
+Write-Host "场景服务:    http://localhost:8083" -ForegroundColor Green
+Write-Host "数据分析:    http://localhost:8085" -ForegroundColor Green
 Write-Host "前端界面:    http://localhost:3000" -ForegroundColor Green

@@ -4,36 +4,36 @@ export const userApi = {
   login(data) {
     return api.post('/user/auth/login', data)
   },
-  
-  register(data) {
-    return api.post('/user/auth/register', data)
+
+  register(data, roleName = 'ROLE_USER') {
+    return api.post(`/user/auth/register?roleName=${roleName}`, data)
   },
-  
+
   logout() {
     return api.post('/user/auth/logout')
   },
-  
+
+  refreshToken(refreshToken) {
+    return api.post('/user/auth/refresh', { refreshToken })
+  },
+
   getUserInfo() {
-    return api.get('/user/info')
+    return api.get('/user/profile')
   },
-  
+
   updateUserInfo(data) {
-    return api.put('/user/info', data)
+    return api.put('/user/profile', data)
   },
-  
+
   changePassword(data) {
     return api.put('/user/password', data)
   },
-  
-  getRoles() {
-    return api.get('/user/roles')
+
+  getSettings() {
+    return api.get('/user/settings')
   },
-  
-  getRolePermissions(roleId) {
-    return api.get(`/user/roles/${roleId}/permissions`)
-  },
-  
-  getOperationLogs() {
-    return api.get('/user/logs')
+
+  updateSettings(data) {
+    return api.put('/user/settings', data)
   }
 }

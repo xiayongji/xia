@@ -26,7 +26,7 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user, 
-                                     @RequestParam(defaultValue = "USER") String roleName) {
+                                     @RequestParam(defaultValue = "ROLE_USER") String roleName) {
         try {
             UserRole userRole = new UserRole();
             userRole.setRoleName(roleName);

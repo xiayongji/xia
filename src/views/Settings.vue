@@ -3,7 +3,7 @@
     <div class="page-header">
       <div class="header-info">
         <h1 class="page-title">系统设置</h1>
-        <p class="page-subtitle">自定义您的智能家居体验</p>
+        <p class="page-subtitle">管理员专用：家庭、设备分组、安全与系统配置</p>
       </div>
     </div>
 
@@ -190,12 +190,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Brush, Grid, Bell, Checked, HomeFilled, Edit, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { useSettingsStore } from '../stores/settings'
 
-const themeColor = ref('#10B981')
-const layoutStyle = ref('light')
+const settingsStore = useSettingsStore()
+const { themeColor, layoutStyle, deviceGroups, notifications, security } = storeToRefs(settingsStore)
 
 const presetColors = [
   { value: '#10B981', name: '翡翠绿' },
@@ -205,27 +207,6 @@ const presetColors = [
   { value: '#F59E0B', name: '琥珀橙' },
   { value: '#EF4444', name: '石榴红' }
 ]
-
-const deviceGroups = ref([
-  { id: 'G001', name: '客厅', deviceCount: 3 },
-  { id: 'G002', name: '卧室', deviceCount: 2 },
-  { id: 'G003', name: '厨房', deviceCount: 1 },
-  { id: 'G004', name: '卫生间', deviceCount: 1 }
-])
-
-const notifications = reactive({
-  deviceOffline: true,
-  energyAlert: true,
-  sceneTrigger: false,
-  systemUpdate: true
-})
-
-const security = reactive({
-  twoFactor: false,
-  loginAlert: true,
-  autoLock: true,
-  lockTime: '10'
-})
 
 const updateTheme = (color) => {
   const root = document.documentElement
@@ -277,6 +258,7 @@ const updateTheme = (color) => {
   document.head.appendChild(style)
   
   localStorage.setItem('themeColor', color)
+  settingsStore.save()
   ElMessage.success('主题颜色已更新')
 }
 
@@ -322,18 +304,23 @@ const editGroup = (group) => {
   ElMessage.info(`编辑分组: ${group.name}`)
 }
 
-const deleteGroup = (group) => {
+const deleteGroup = async (group) => {
   const index = deviceGroups.value.findIndex(g => g.id === group.id)
   if (index > -1) {
     deviceGroups.value.splice(index, 1)
+    await settingsStore.save()
     ElMessage.success('分组已删除')
   }
 }
 
-onMounted(() => {
-  const savedColor = localStorage.getItem('themeColor')
-  if (savedColor) {
-    themeColor.value = savedColor
+watch([notifications, security, layoutStyle, deviceGroups], () => {
+  settingsStore.save()
+}, { deep: true })
+
+onMounted(async () => {
+  await settingsStore.load()
+  if (themeColor.value) {
+    updateTheme(themeColor.value)
   }
 })
 </script>

@@ -6,7 +6,12 @@
         <p class="page-subtitle">实时查看和控制您的智能设备</p>
       </div>
       <div class="header-actions">
-        <el-button type="primary" class="add-device-btn" @click="showAddDevice = true">
+        <el-button
+          v-if="canManageDevices"
+          type="primary"
+          class="add-device-btn"
+          @click="showAddDevice = true"
+        >
           <el-icon><Plus /></el-icon>
           <span>添加设备</span>
         </el-button>
@@ -88,11 +93,15 @@
         >
           <div class="device-header">
             <div class="device-icon" :class="device.type">
-              <component :is="getDeviceIcon(device.type)" :size="32" />
+              <component :is="markRaw(getDeviceIcon(device))" :size="32" />
             </div>
             <div class="device-actions">
               <span :class="device.status">{{ getStatusText(device.status) }}</span>
-              <button class="delete-btn" @click.stop="confirmDelete(device)">
+              <button
+                v-if="canManageDevices"
+                class="delete-btn"
+                @click.stop="confirmDelete(device)"
+              >
                 <el-icon><Delete /></el-icon>
               </button>
             </div>
@@ -104,16 +113,16 @@
           </div>
           
           <div class="device-controls" v-if="device.status === 'online'">
-            <div class="control-row" v-if="device.type === '照明' || device.type === '智能控制'">
+            <div class="control-row" v-if="device.type === '照明' || device.type === 'LIGHT' || device.type === '智能控制' || device.type === 'SMART'">
               <span class="control-label">开关</span>
               <el-switch 
-                v-model="device.isOn" 
-                @change="toggleDevice(device)"
+                v-model="device.isOn"
+                @change="(val) => toggleDevice(device, val)"
                 active-color="#10B981"
                 inactive-color="#94A3B8"
               />
             </div>
-            <div class="control-row" v-if="device.type === '照明'">
+            <div class="control-row" v-if="device.type === '照明' || device.type === 'LIGHT'">
               <span class="control-label">亮度</span>
               <el-slider 
                 v-model="device.brightness" 
@@ -123,7 +132,7 @@
                 active-color="#10B981"
               />
             </div>
-            <div class="control-row" v-if="device.type === '空调'">
+            <div class="control-row" v-if="device.type === '空调' || device.type === 'AC'">
               <span class="control-label">温度</span>
               <div class="temp-control">
                 <el-button size="small" @click="adjustTemp(device, -1)">-</el-button>
@@ -143,7 +152,7 @@
     <div class="quick-scenes">
       <div class="section-header">
         <h2>快捷场景</h2>
-        <el-button type="text" class="view-all-btn" @click="goToScenes">查看全部</el-button>
+        <el-button type="primary" link class="view-all-btn" @click="goToScenes">查看全部</el-button>
       </div>
       
       <div class="scene-grid">
@@ -177,10 +186,19 @@
         </el-form-item>
         <el-form-item label="设备类型">
           <el-select v-model="newDevice.type" placeholder="请选择设备类型">
-            <el-option label="照明" value="照明" />
-            <el-option label="空调" value="空调" />
-            <el-option label="家电" value="家电" />
-            <el-option label="智能控制" value="智能控制" />
+            <el-option label="💡 照明" value="照明" />
+            <el-option label="❄️ 空调" value="空调" />
+            <el-option label="📦 家电" value="家电" />
+            <el-option label="🖥️ 智能控制" value="智能控制" />
+            <el-option label="🧊 冰箱" value="冰箱" />
+            <el-option label="🔄 洗衣机" value="洗衣机" />
+            <el-option label="🚿 热水器" value="热水器" />
+            <el-option label="📹 摄像头" value="摄像头" />
+            <el-option label="🔒 门锁" value="门锁" />
+            <el-option label="🪟 窗帘" value="窗帘" />
+            <el-option label="🔌 开关" value="开关" />
+            <el-option label="🔗 插座" value="插座" />
+            <el-option label="📊 传感器" value="传感器" />
           </el-select>
         </el-form-item>
         <el-form-item label="设备位置">
@@ -196,31 +214,37 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated, markRaw } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
+import { useDeviceStore } from '../stores/devices'
+import { useSceneStore } from '../stores/scenes'
+import { usePermissions } from '../composables/usePermissions'
+import { getDeviceId } from '../utils/deviceHelpers'
 import { 
   Plus, Grid, Connection, Link, Warning, VideoPlay,
   Sunny, WindPower, RefreshLeft, Monitor, HomeFilled,
-  Delete
+  Delete, VideoCamera, Key, Crop, DataLine, Switch,
+  Coffee, Printer, Box, Bell, Lock, Unlock,
+  Setting, Odometer, RefreshRight
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deviceApi } from '../api/device'
-import { sceneApi } from '../api/scene'
-
 const router = useRouter()
+const deviceStore = useDeviceStore()
+const sceneStore = useSceneStore()
+const { devices } = storeToRefs(deviceStore)
+const { canManageDevices, canManageScenes } = usePermissions()
 
-const devices = ref([])
 const searchQuery = ref('')
 const filterStatus = ref('')
 const showAddDevice = ref(false)
 const newDevice = ref({ name: '', type: '', location: '' })
-const loading = ref(false)
 
 const quickScenes = ref([
-  { id: 'S001', name: '回家模式', description: '开启灯光和空调', icon: HomeFilled, bgColor: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' },
-  { id: 'S002', name: '睡眠模式', description: '关闭所有灯光', icon: Sunny, bgColor: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' },
-  { id: 'S003', name: '离家模式', description: '关闭所有设备', icon: Link, bgColor: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)' },
-  { id: 'S004', name: '阅读模式', description: '调节灯光亮度', icon: Sunny, bgColor: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }
+  { id: 'S001', name: '回家模式', description: '开启灯光和空调', icon: markRaw(HomeFilled), bgColor: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' },
+  { id: 'S002', name: '睡眠模式', description: '关闭所有灯光', icon: markRaw(Sunny), bgColor: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' },
+  { id: 'S003', name: '离家模式', description: '关闭所有设备', icon: markRaw(Link), bgColor: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)' },
+  { id: 'S004', name: '阅读模式', description: '调节灯光亮度', icon: markRaw(Sunny), bgColor: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }
 ])
 
 const totalDevices = computed(() => devices.value.length)
@@ -242,14 +266,47 @@ const filteredDevices = computed(() => {
   return result
 })
 
-const getDeviceIcon = (type) => {
-  const icons = {
-    '照明': Sunny,
-    '空调': WindPower,
-    '家电': RefreshLeft,
-    '智能控制': Monitor
-  }
-  return icons[type] || Sunny
+const getDeviceIcon = (device) => {
+  const name = (device.name || '').toLowerCase()
+  const type = (device.type || '').toUpperCase()
+  
+  if (name.includes('空调') || name.includes('ac') || name.includes('air')) return WindPower
+  if (name.includes('灯') || name.includes('光') || name.includes('light')) return Sunny
+  if (name.includes('冰箱') || name.includes('冰') || name.includes('fridge')) return Box
+  if (name.includes('洗衣机') || name.includes('洗衣')) return RefreshLeft
+  if (name.includes('热水') || name.includes('heater')) return RefreshRight
+  if (name.includes('扫地') || name.includes('robot')) return Odometer
+  if (name.includes('门锁') || name.includes('lock')) return Lock
+  if (name.includes('摄像') || name.includes('camera')) return VideoCamera
+  if (name.includes('窗帘') || name.includes('curtain')) return Crop
+  if (name.includes('开关') || name.includes('switch')) return Switch
+  if (name.includes('插座') || name.includes('socket')) return Connection
+  if (name.includes('传感') || name.includes('sensor')) return DataLine
+  if (name.includes('温湿度')) return Odometer
+  if (name.includes('烟') || name.includes('燃气') || name.includes('alarm')) return Bell
+  if (name.includes('电视') || name.includes('tv')) return Monitor
+  if (name.includes('音') || name.includes('音响') || name.includes('speaker')) return Bell
+  if (name.includes('路由') || name.includes('wifi')) return Link
+  if (name.includes('门') || name.includes('door')) return Key
+  if (name.includes('窗') || name.includes('window')) return Crop
+  if (name.includes('打印') || name.includes('printer')) return Box
+  if (name.includes('咖') || name.includes('coffee')) return Coffee
+  if (name.includes('微波') || name.includes('microwave')) return RefreshLeft
+  
+  if (type === 'AC' || type === '空调') return WindPower
+  if (type === 'LIGHT' || type === '照明') return Sunny
+  if (type === 'CAMERA') return VideoCamera
+  if (type === 'SENSOR') return DataLine
+  if (type === 'LOCK') return Lock
+  if (type === 'CURTAIN') return Crop
+  if (type === 'SWITCH') return Switch
+  if (type === 'APPLIANCE' || type === '家电') return Box
+  if (type === 'SMART' || type === '智能控制') return Monitor
+  if (type === 'REFRIGERATOR' || type === '冰箱') return Box
+  if (type === 'WATER_HEATER' || type === '热水器') return RefreshRight
+  if (type === 'WASHER' || type === '洗衣机') return RefreshLeft
+  
+  return Setting
 }
 
 const getStatusText = (status) => {
@@ -261,12 +318,16 @@ const getStatusText = (status) => {
   return texts[status] || status
 }
 
-const toggleDevice = async (device) => {
+const toggleDevice = async (device, turnOn) => {
+  const targetOn = turnOn !== undefined ? turnOn : device.isOn
+  const previousOn = !targetOn
+  device.isOn = targetOn
   try {
-    await deviceApi.controlDevice(device.id, { command: device.isOn ? 'on' : 'off' })
-    ElMessage.success(device.isOn ? `${device.name}已开启` : `${device.name}已关闭`)
+    await deviceStore.setDevicePower(device, targetOn)
+    ElMessage.success(`${device.name}已${targetOn ? '开启' : '关闭'}`)
   } catch (error) {
-    ElMessage.error('控制失败')
+    device.isOn = previousOn
+    ElMessage.error(error?.response?.data || '控制失败')
   }
 }
 
@@ -277,10 +338,9 @@ const adjustDevice = (device) => {
 const adjustTemp = async (device, delta) => {
   const newTemp = device.temperature + delta
   if (newTemp >= 16 && newTemp <= 32) {
-    device.temperature = newTemp
     try {
-      await deviceApi.controlDevice(device.id, { command: 'setTemp', value: device.temperature })
-      ElMessage.info(`${device.name}温度已调整为 ${device.temperature}°C`)
+      await deviceStore.sendCommand(device, 'setTemp', { value: newTemp })
+      ElMessage.info(`${device.name}温度已调整为 ${newTemp}°C`)
     } catch (error) {
       ElMessage.error('温度调整失败')
     }
@@ -292,12 +352,17 @@ const showDeviceDetail = (device) => {
 }
 
 const addDevice = async () => {
+  if (!canManageDevices.value) {
+    ElMessage.warning('普通用户无权添加设备')
+    return
+  }
   if (!newDevice.value.name || !newDevice.value.type) {
     ElMessage.warning('请填写完整信息')
     return
   }
+
   try {
-    await deviceApi.createDevice({
+    await deviceStore.addDevice({
       name: newDevice.value.name,
       type: newDevice.value.type,
       protocol: 'wifi'
@@ -305,7 +370,6 @@ const addDevice = async () => {
     ElMessage.success('设备添加成功')
     showAddDevice.value = false
     newDevice.value = { name: '', type: '', location: '' }
-    loadDevices()
   } catch (error) {
     ElMessage.error('添加失败')
   }
@@ -329,10 +393,13 @@ const confirmDelete = async (device) => {
 }
 
 const deleteDevice = async (device) => {
+  if (!canManageDevices.value) {
+    ElMessage.warning('普通用户无权删除设备')
+    return
+  }
   try {
-    await deviceApi.deleteDevice(device.id)
+    await deviceStore.removeDevice(device)
     ElMessage.success(`${device.name}已删除`)
-    loadDevices()
   } catch (error) {
     ElMessage.error('删除失败')
   }
@@ -340,7 +407,13 @@ const deleteDevice = async (device) => {
 
 const triggerScene = async (scene) => {
   try {
-    await sceneApi.executeScene(scene.id)
+    if (scene.id) {
+      await sceneStore.triggerSceneById(scene.id)
+    } else {
+      const quick = sceneStore.quickSceneDefs.find(q => scene.name?.includes(q.name.replace('模式', '')))
+      if (quick) await sceneStore.triggerQuickScene(quick)
+    }
+    await deviceStore.fetchDevices(true)
     ElMessage.success(`${scene.name}已触发`)
   } catch (error) {
     ElMessage.error('场景触发失败')
@@ -351,51 +424,13 @@ const goToScenes = () => {
   router.push('/scenes')
 }
 
-const loadDevices = async () => {
-  loading.value = true
-  try {
-    const data = await deviceApi.getDevices()
-    if (data && Array.isArray(data) && data.length > 0) {
-      devices.value = data.map(d => ({
-        ...d,
-        isOn: d.status === 'online',
-        brightness: d.type === '照明' ? 50 : undefined,
-        temperature: d.type === '空调' ? 26 : undefined,
-        lastActive: '刚刚'
-      }))
-    } else {
-      useMockData()
-    }
-  } catch (error) {
-    useMockData()
-  } finally {
-    loading.value = false
-  }
-}
-
-const useMockData = () => {
-  ElMessage.warning('使用演示数据，请启动后端服务以获取真实数据')
-  devices.value = [
-    { id: 'D001', name: '客厅灯', type: '照明', status: 'online', isOn: true, brightness: 80, lastActive: '刚刚' },
-    { id: 'D002', name: '卧室灯', type: '照明', status: 'online', isOn: false, brightness: 50, lastActive: '5分钟前' },
-    { id: 'D003', name: '客厅空调', type: '空调', status: 'online', isOn: true, temperature: 26, lastActive: '刚刚' },
-    { id: 'D004', name: '洗衣机', type: '家电', status: 'online', isOn: false, lastActive: '1小时前' },
-    { id: 'D005', name: '冰箱', type: '家电', status: 'warning', isOn: true, lastActive: '30分钟前' },
-    { id: 'D006', name: '客厅窗帘', type: '智能控制', status: 'online', isOn: true, lastActive: '刚刚' },
-    { id: 'D007', name: '厨房灯', type: '照明', status: 'offline', isOn: false, brightness: 0, lastActive: '昨天' },
-    { id: 'D008', name: '卧室空调', type: '空调', status: 'online', isOn: false, temperature: 24, lastActive: '2小时前' }
-  ]
-}
+const refreshDevices = () => deviceStore.fetchDevices(true)
 
 onMounted(() => {
-  loadDevices()
-  setInterval(() => {
-    const randomDevice = devices.value[Math.floor(Math.random() * devices.value.length)]
-    if (randomDevice && randomDevice.status === 'online') {
-      randomDevice.lastActive = '刚刚'
-    }
-  }, 10000)
+  deviceStore.startPolling()
+  refreshDevices()
 })
+onActivated(refreshDevices)
 </script>
 
 <style scoped>

@@ -32,19 +32,15 @@ const routes = [
     path: '/user',
     name: 'UserDashboard',
     component: () => import('../views/UserDashboard.vue'),
-    meta: { requiresAuth: true, roles: [Role.USER] }
+    meta: { requiresAuth: true }
   },
   {
     path: '/users',
-    name: 'UserManagement',
-    component: () => import('../views/UserManagement.vue'),
-    meta: { requiresAuth: true, roles: [Role.ADMIN] }
+    redirect: '/admin'
   },
   {
     path: '/admin-settings',
-    name: 'AdminSettings',
-    component: () => import('../views/AdminSettings.vue'),
-    meta: { requiresAuth: true, roles: [Role.ADMIN] }
+    redirect: '/admin'
   },
   {
     path: '/scenes',
@@ -62,7 +58,7 @@ const routes = [
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/Settings.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: [Role.ADMIN] }
   },
   {
     path: '/profile',
@@ -89,12 +85,12 @@ router.beforeEach((to, from, next) => {
 
   const requiredRoles = to.matched.find(record => record.meta.roles)?.meta.roles
   if (requiredRoles && !requiredRoles.includes(userRole)) {
-    next('/dashboard')
+    next('/user')
     return
   }
 
   if (hasToken && (to.path === '/login' || to.path === '/register')) {
-    next('/dashboard')
+    next('/user')
     return
   }
 

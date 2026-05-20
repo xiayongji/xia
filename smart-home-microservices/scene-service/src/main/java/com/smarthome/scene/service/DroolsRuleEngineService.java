@@ -1,154 +1,134 @@
 package com.smarthome.scene.service;
 
 import com.smarthome.scene.entity.SceneRule;
-import com.smarthome.scene.entity.TriggerEvent;
 import com.smarthome.scene.repository.SceneRuleRepository;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.kie.api.KieBase;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.KieModule;
-import org.kie.api.io.ResourceType;
+import org.kie.api.builder.KieRepository;
+import org.kie.api.builder.ReleaseId;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.kie.internal.io.ResourceFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class DroolsRuleEngineService {
 
-    private final SceneRuleRepository ruleRepository;
-    
-    private KieContainer kieContainer;
+    @Autowired
+    private SceneRuleRepository sceneRuleRepository;
+
+    private final Map<String, KieContainer> kieContainers = new ConcurrentHashMap<>();
+    private KieSession kieSession;
 
     @PostConstruct
     public void init() {
+        loadRules();
+    }
+
+    public void loadRules() {
         try {
-            reloadAllRules();
-            log.info("Drools规则引擎初始化完成");
+            KieServices kieServices = KieServices.Factory.get();
+            KieFileSystem kieFileSystem = kieServices.newKieFileSystem();
+
+            List<SceneRule> rules = sceneRuleRepository.findByEnabled(true);
+
+            int ruleIndex = 1;
+            for (SceneRule rule : rules) {
+                String drlContent = generateDrlFromRule(rule);
+                kieFileSystem.write("src/main/resources/rules/rule" + ruleIndex + ".drl", drlContent);
+                ruleIndex++;
+            }
+
+            KieBuilder kieBuilder = kieServices.newKieBuilder(kieFileSystem);
+            kieBuilder.buildAll();
+
+            KieModule kieModule = kieBuilder.getKieModule();
+            KieContainer kieContainer = kieServices.newKieContainer(kieModule.getReleaseId());
+
+            kieSession = kieContainer.newKieSession();
+            log.info("Drools规则引擎初始化成功，加载了 {} 条规则", rules.size());
+
         } catch (Exception e) {
-            log.warn("Drools规则引擎初始化失败，将使用简化规则引擎: {}", e.getMessage());
+            log.error("Drools规则引擎初始化失败", e);
+            createDefaultKieSession();
         }
     }
 
-    public void reloadAllRules() {
-        KieServices kieServices = KieServices.Factory.get();
-        KieFileSystem kfs = kieServices.newKieFileSystem();
+    private String generateDrlFromRule(SceneRule rule) {
+        StringBuilder drl = new StringBuilder();
+        drl.append("package com.smarthome.scene.rules\n\n");
+        drl.append("import com.smarthome.scene.service.SceneExecutionContext\n\n");
+        drl.append("rule \"").append(rule.getRuleName()).append("\"\n");
+        drl.append("when\n");
 
-        List<SceneRule> rules = ruleRepository.findByEnabled(true);
-        for (SceneRule rule : rules) {
-            String fileName = "rules/" + rule.getId() + "_" + rule.getRuleName() + ".drl";
-            kfs.write(ResourceFactory.newByteArrayResource(
-                rule.getDrlContent().getBytes(StandardCharsets.UTF_8)
-            ).setResourceType(ResourceType.DRL).setSourcePath(fileName));
+        if (rule.getRuleCondition() != null && !rule.getRuleCondition().isEmpty()) {
+            drl.append("  $context : SceneExecutionContext(").append(rule.getRuleCondition()).append(")\n");
         }
 
-        KieBuilder kieBuilder = kieServices.newKieBuilder(kfs).buildAll();
-        if (kieBuilder.getResults().hasMessages(org.kie.api.builder.Message.Level.ERROR)) {
-            throw new RuntimeException("规则编译失败: " + kieBuilder.getResults());
+        drl.append("then\n");
+        if (rule.getRuleAction() != null && !rule.getRuleAction().isEmpty()) {
+            drl.append("  ").append(rule.getRuleAction()).append("\n");
+        }
+        drl.append("end\n");
+
+        return drl.toString();
+    }
+
+    private void createDefaultKieSession() {
+        kieSession = null;
+        log.warn("Drools 规则未加载，将使用默认场景评估逻辑");
+    }
+
+    public boolean evaluateRules(SceneExecutionContext context) {
+        if (kieSession == null) {
+            log.warn("KieSession未初始化，使用默认逻辑评估");
+            return evaluateDefault(context);
         }
 
-        KieModule kieModule = kieBuilder.getKieModule();
-        kieContainer = kieServices.newKieContainer(kieModule.getReleaseId());
-        
-        log.info("规则引擎重新加载完成，加载 {} 条规则", rules.size());
+        try {
+            kieSession.insert(context);
+            int firedRules = kieSession.fireAllRules();
+            kieSession.dispose();
+            log.debug("规则引擎评估完成，触发了 {} 条规则", firedRules);
+            return firedRules > 0;
+        } catch (Exception e) {
+            log.error("规则引擎评估失败", e);
+            return evaluateDefault(context);
+        }
+    }
+
+    private boolean evaluateDefault(SceneExecutionContext context) {
+        return context.getSceneId() != null;
     }
 
     public void addRule(SceneRule rule) {
-        if (kieContainer == null) {
-            log.warn("Drools引擎未初始化，跳过规则添加");
-            return;
-        }
-
-        KieServices kieServices = KieServices.Factory.get();
-        KieFileSystem kfs = kieServices.newKieFileSystem();
-
-        KieBase kieBase = kieContainer.getKieBase();
-        for (org.kie.api.definition.rule.Rule drlRule : kieBase.getRules()) {
-            kfs.write("rules/" + drlRule.getName() + ".drl", drlRule.toString());
-        }
-
-        String fileName = "rules/" + rule.getId() + "_" + rule.getRuleName() + ".drl";
-        kfs.write(ResourceFactory.newByteArrayResource(
-            rule.getDrlContent().getBytes(StandardCharsets.UTF_8)
-        ).setResourceType(ResourceType.DRL).setSourcePath(fileName));
-
-        KieBuilder kieBuilder = kieServices.newKieBuilder(kfs).buildAll();
-        kieContainer = kieServices.newKieContainer(kieBuilder.getKieModule().getReleaseId());
-        
-        log.info("规则添加成功: {}", rule.getRuleName());
+        sceneRuleRepository.save(rule);
+        loadRules();
+        log.info("添加新规则: {}", rule.getRuleName());
     }
 
-    public void executeRules(TriggerEvent event) {
-        if (kieContainer == null) {
-            executeSimpleRules(event);
-            return;
-        }
-
-        KieSession kieSession = kieContainer.newKieSession();
-        try {
-            kieSession.setGlobal("log", log);
-            kieSession.insert(event);
-            int firedCount = kieSession.fireAllRules();
-            log.debug("执行 {} 条规则", firedCount);
-        } finally {
-            kieSession.dispose();
-        }
+    public void updateRule(SceneRule rule) {
+        sceneRuleRepository.save(rule);
+        loadRules();
+        log.info("更新规则: {}", rule.getRuleName());
     }
 
-    private void executeSimpleRules(TriggerEvent event) {
-        List<SceneRule> rules = ruleRepository.findByEnabled(true);
-        
-        for (SceneRule rule : rules) {
-            if (matchesCondition(rule, event)) {
-                executeRuleActions(rule, event);
-            }
-        }
+    public void deleteRule(Long ruleId) {
+        sceneRuleRepository.deleteById(ruleId);
+        loadRules();
+        log.info("删除规则: {}", ruleId);
     }
 
-    private boolean matchesCondition(SceneRule rule, TriggerEvent event) {
-        String condition = rule.getDrlContent().toLowerCase();
-        
-        if (condition.contains("temperature") && event.getSensorType() != null) {
-            if (condition.contains(">") && event.getValue() != null) {
-                double threshold = extractThreshold(condition, ">");
-                return event.getValue() > threshold;
-            }
-            if (condition.contains("<") && event.getValue() != null) {
-                double threshold = extractThreshold(condition, "<");
-                return event.getValue() < threshold;
-            }
-        }
-        
-        return condition.contains(event.getTriggerType());
-    }
-
-    private double extractThreshold(String condition, String operator) {
-        int index = condition.indexOf(operator);
-        if (index > 0) {
-            String substring = condition.substring(index + 1).trim();
-            try {
-                return Double.parseDouble(substring.split(" ")[0]);
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    private void executeRuleActions(SceneRule rule, TriggerEvent event) {
-        log.info("执行简化规则: {} - 触发事件: {}", rule.getRuleName(), event.getTriggerType());
-    }
-
-    public boolean isEngineInitialized() {
-        return kieContainer != null;
+    public List<SceneRule> getAllRules() {
+        return sceneRuleRepository.findAll();
     }
 }
