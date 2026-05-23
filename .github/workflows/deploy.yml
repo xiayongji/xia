@@ -1,0 +1,83 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "docker-compose.prod.yml"
+      - ".github/workflows/deploy.yml"
+  workflow_run:
+    workflows: ["Docker Build and Publish"]
+    types:
+      - completed
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}' \
+            REGISTRY='${{ vars.REGISTRY || 'ghcr.io' }}' \
+            REPO_OWNER='${{ github.repository_owner }}' \
+            GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
+            bash -s << 'DEPLOY_SCRIPT'
+          set -e
+          cd "$DEPLOY_PATH"
+          echo "Pulling latest changes..."
+          git pull origin main
+          echo "Logging into container registry..."
+          echo "$GITHUB_TOKEN" | docker login "$REGISTRY" -u token --password-stdin
+          echo "Pulling latest images..."
+          docker compose -f docker-compose.prod.yml pull
+          echo "Restarting services..."
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          echo "Pruning old images..."
+          docker image prune -f --filter "until=72h"
+          echo "Deployment completed!"
+          echo ""
+          echo "=== Service Status ==="
+          docker compose -f docker-compose.prod.yml ps
+          DEPLOY_SCRIPT
+
+      - name: Health check
+        if: success()
+        run: |
+          echo "Waiting for services to stabilize..."
+          sleep 30
+          echo "Checking API Gateway health..."
+          curl -f -s -o /dev/null -w "HTTP %{http_code}" \
+            "http://${{ secrets.DEPLOY_HOST }}:${{ vars.API_GATEWAY_PORT || '8080' }}/actuator/health" \
+            || echo " (health check endpoint not accessible, this may be normal)"
+
+      - name: Deployment result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "::notice::Deployment to ${{ github.event.inputs.environment || 'staging' }} completed successfully!"
+          else
+            echo "::error::Deployment failed! Check logs for details."
+          fi

@@ -1,1 +1,49 @@
-node_modules
+# Node
+node_modules/
+dist/
+
+# Java
+smart-home-microservices/**/target/
+*.class
+*.jar
+*.war
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.exe
+*.msi
+
+# Docker volumes
+mysql_data/
+redis_data/
+rabbitmq_data/
+prometheus_data/
+grafana_data/
+
+# Logs
+logs/
+*.log
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.docx
+
+# Environment (keep .env but not overrides)
+.env.local
+.env.production
+.env.staging
+
+# Generated files
+proposal_report.pdf

@@ -6,27 +6,6 @@ x-logging: &default-logging
     max-size: "20m"
     max-file: "5"
 
-x-healthcheck-mysql: &healthcheck-mysql
-  test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-  interval: 15s
-  timeout: 5s
-  retries: 5
-  start_period: 60s
-
-x-healthcheck-redis: &healthcheck-redis
-  test: ["CMD", "redis-cli", "ping"]
-  interval: 15s
-  timeout: 5s
-  retries: 5
-  start_period: 40s
-
-x-healthcheck-rabbitmq: &healthcheck-rabbitmq
-  test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-  interval: 15s
-  timeout: 5s
-  retries: 5
-  start_period: 60s
-
 x-healthcheck-spring: &healthcheck-spring
   interval: 30s
   timeout: 10s
@@ -44,13 +23,16 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "${MYSQL_PORT}:3306"
+      - "127.0.0.1:${MYSQL_PORT}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./smart-home-microservices/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - smart-home-network
-    healthcheck: *healthcheck-mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     logging: *default-logging
     deploy:
       resources:
@@ -65,19 +47,22 @@ services:
       - --collation-server=utf8mb4_unicode_ci
       - --max-connections=200
       - --innodb-buffer-pool-size=256M
-      - --performance-schema=OFF
 
   redis:
     image: redis:7.0-alpine
     container_name: smart-home-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT}:6379"
+      - "127.0.0.1:${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
     networks:
       - smart-home-network
-    healthcheck: *healthcheck-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     logging: *default-logging
     deploy:
       resources:
@@ -91,11 +76,7 @@ services:
       redis-server
       --maxmemory 200mb
       --maxmemory-policy allkeys-lru
-      --save 900 1
-      --save 300 10
-      --save 60 10000
       --appendonly yes
-      --appendfsync everysec
 
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
@@ -105,34 +86,34 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - smart-home-network
-    healthcheck: *healthcheck-rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     logging: *default-logging
     deploy:
       resources:
         limits:
           cpus: "1.0"
           memory: "512M"
-        reservations:
-          cpus: "0.25"
-          memory: "256M"
 
   eureka-server:
-    build:
-      context: ./smart-home-microservices/eureka-server
-      dockerfile: Dockerfile
-    image: smart-home/eureka-server:latest
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/eureka-server:latest
     container_name: eureka-server
     restart: unless-stopped
     ports:
-      - "${EUREKA_PORT}:8761"
+      - "127.0.0.1:${EUREKA_PORT}:8761"
     networks:
       - smart-home-network
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS_EUREKA}
+      SPRING_PROFILES_ACTIVE: docker
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       <<: *healthcheck-spring
@@ -145,15 +126,9 @@ services:
         reservations:
           cpus: "0.25"
           memory: "256M"
-    environment:
-      JAVA_OPTS: ${JAVA_OPTS_EUREKA}
-      SPRING_PROFILES_ACTIVE: docker
 
   api-gateway:
-    build:
-      context: ./smart-home-microservices/api-gateway
-      dockerfile: Dockerfile
-    image: smart-home/api-gateway:latest
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/api-gateway:latest
     container_name: api-gateway
     restart: unless-stopped
     ports:
@@ -161,12 +136,6 @@ services:
     environment:
       JAVA_OPTS: ${JAVA_OPTS_GATEWAY}
       SPRING_PROFILES_ACTIVE: docker
-      DEVICE_SERVICE_URL: http://device-service:8081
-      SCENE_SERVICE_URL: http://scene-service:8083
-      USER_SERVICE_URL: http://user-service:8082
-      ANALYTICS_SERVICE_URL: http://analytics-service:8085
-      EDGE_SERVICE_URL: http://edge-service:8084
-      MULTIMODAL_SERVICE_URL: http://multimodal-service:8089
     networks:
       - smart-home-network
     healthcheck:
@@ -186,14 +155,11 @@ services:
         condition: service_healthy
 
   device-service:
-    build:
-      context: ./smart-home-microservices/device-service
-      dockerfile: Dockerfile
-    image: smart-home/device-service:latest
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/device-service:latest
     container_name: device-service
     restart: unless-stopped
     ports:
-      - "${DEVICE_SERVICE_PORT}:8081"
+      - "127.0.0.1:${DEVICE_SERVICE_PORT}:8081"
     environment:
       JAVA_OPTS: ${JAVA_OPTS_DEVICE}
       SPRING_PROFILES_ACTIVE: docker
@@ -225,56 +191,12 @@ services:
       redis:
         condition: service_healthy
 
-  user-service:
-    build:
-      context: ./smart-home-microservices/user-service
-      dockerfile: Dockerfile
-    image: smart-home/user-service:latest
-    container_name: user-service
-    restart: unless-stopped
-    profiles:
-      - full
-    ports:
-      - "${USER_SERVICE_PORT}:8082"
-    environment:
-      JAVA_OPTS: ${JAVA_OPTS_USER}
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_REDIS_HOST: redis
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-    networks:
-      - smart-home-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
-      <<: *healthcheck-spring
-    logging: *default-logging
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "640M"
-        reservations:
-          cpus: "0.5"
-          memory: "384M"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   scene-service:
-    build:
-      context: ./smart-home-microservices/scene-service
-      dockerfile: Dockerfile
-    image: smart-home/scene-service:latest
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/scene-service:latest
     container_name: scene-service
     restart: unless-stopped
     ports:
-      - "${SCENE_SERVICE_PORT}:8083"
+      - "127.0.0.1:${SCENE_SERVICE_PORT}:8083"
     environment:
       JAVA_OPTS: ${JAVA_OPTS_SCENE}
       SPRING_PROFILES_ACTIVE: docker
@@ -306,15 +228,12 @@ services:
         condition: service_healthy
 
   edge-service:
-    build:
-      context: ./smart-home-microservices/edge-service
-      dockerfile: Dockerfile
-    image: smart-home/edge-service:latest
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/edge-service:latest
     container_name: edge-service
     restart: unless-stopped
     ports:
-      - "${EDGE_SERVICE_PORT}:8084"
-      - "${EDGE_GRPC_PORT}:9094"
+      - "127.0.0.1:${EDGE_SERVICE_PORT}:8084"
+      - "127.0.0.1:${EDGE_GRPC_PORT}:9094"
     environment:
       JAVA_OPTS: ${JAVA_OPTS_EDGE}
       SPRING_PROFILES_ACTIVE: docker
@@ -344,18 +263,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
 
   analytics-service:
-    build:
-      context: ./smart-home-microservices/analytics-service
-      dockerfile: Dockerfile
-    image: smart-home/analytics-service:latest
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/analytics-service:latest
     container_name: analytics-service
     restart: unless-stopped
     ports:
-      - "${ANALYTICS_SERVICE_PORT}:8085"
+      - "127.0.0.1:${ANALYTICS_SERVICE_PORT}:8085"
     environment:
       JAVA_OPTS: ${JAVA_OPTS_ANALYTICS}
       SPRING_PROFILES_ACTIVE: docker
@@ -385,56 +299,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-
-  multimodal-service:
-    build:
-      context: ./smart-home-microservices/multimodal-service
-      dockerfile: Dockerfile
-    image: smart-home/multimodal-service:latest
-    container_name: multimodal-service
-    restart: unless-stopped
-    profiles:
-      - full
-    ports:
-      - "${MULTIMODAL_SERVICE_PORT}:8089"
-    environment:
-      JAVA_OPTS: ${JAVA_OPTS_MULTIMODAL}
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_REDIS_HOST: redis
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-    networks:
-      - smart-home-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
-      <<: *healthcheck-spring
-    logging: *default-logging
-    deploy:
-      resources:
-        limits:
-          cpus: "1.5"
-          memory: "896M"
-        reservations:
-          cpus: "0.5"
-          memory: "384M"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:v2.50.0
     container_name: smart-home-prometheus
     restart: unless-stopped
     ports:
-      - "${PROMETHEUS_PORT}:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT}:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
@@ -459,18 +330,16 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=30d"
-      - "--web.enable-lifecycle"
 
   grafana:
     image: grafana/grafana:10.4.0
     container_name: smart-home-grafana
     restart: unless-stopped
     ports:
-      - "${GRAFANA_PORT}:3000"
+      - "127.0.0.1:${GRAFANA_PORT}:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana_dashboard.json:/etc/grafana/provisioning/dashboards/smart-home.json:ro
@@ -496,14 +365,11 @@ services:
         condition: service_healthy
 
   frontend:
-    image: nginx:1.25-alpine
+    image: ${REGISTRY:-ghcr.io}/${REPO_OWNER}/smart-home/frontend:latest
     container_name: smart-home-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT}:80"
-    volumes:
-      - ./dist:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - smart-home-network
     healthcheck:
@@ -526,18 +392,11 @@ services:
 
 volumes:
   mysql_data:
-    driver: local
   redis_data:
-    driver: local
   rabbitmq_data:
-    driver: local
   prometheus_data:
-    driver: local
   grafana_data:
-    driver: local
 
 networks:
   smart-home-network:
     driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: br-smarthome
