@@ -1,0 +1,154 @@
+name: Docker Multi-Arch Build (ARM64 + AMD64)
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - "v*"
+    paths:
+      - "smart-home-microservices/**"
+      - "dist/**"
+      - "Dockerfile.frontend"
+      - "nginx.conf"
+      - "docker-compose.pi.yml"
+      - ".env.pi"
+      - ".github/workflows/docker-multiarch.yml"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/smart-home
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  detect-services:
+    name: Detect Services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect services with Dockerfiles
+        id: set-services
+        run: |
+          SERVICES=$(find smart-home-microservices -maxdepth 2 -name "Dockerfile" -exec dirname {} \; | sed 's|smart-home-microservices/||' | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          echo "Detected services: $SERVICES"
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    name: Build ${{ matrix.service }} (${{ env.PLATFORMS }})
+    needs: detect-services
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-services.outputs.services) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,amd64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=pi-latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+
+      - name: Build and push multi-arch Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./smart-home-microservices/${{ matrix.service }}
+          file: ./smart-home-microservices/${{ matrix.service }}/Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-frontend:
+    name: Build Frontend (${{ env.PLATFORMS }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,amd64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for frontend
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=raw,value=pi-latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+
+      - name: Build and push frontend multi-arch image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.frontend
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  notify:
+    name: Build Summary
+    needs: [build-and-push, build-frontend]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Result
+        run: |
+          if [ "${{ needs.build-and-push.result }}" = "success" ] && [ "${{ needs.build-frontend.result }}" = "success" ]; then
+            echo "::notice::All ARM64 + AMD64 Docker images built and published to ghcr.io!"
+            echo "Pull on Pi: docker pull ghcr.io/${{ github.repository_owner }}/smart-home/SERVICE:pi-latest"
+          else
+            echo "::error::Some builds failed. Check the logs."
+          fi
