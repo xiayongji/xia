@@ -1,0 +1,4 @@
+com/smarthome/user/controller/UserControllerTest.class
+com/smarthome/user/service/RbacServiceTest.class
+com/smarthome/user/controller/AuthControllerTest.class
+com/smarthome/user/service/UserServiceTest.class

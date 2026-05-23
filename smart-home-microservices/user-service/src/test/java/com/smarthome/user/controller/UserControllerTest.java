@@ -2,6 +2,7 @@ package com.smarthome.user.controller;
 
 import com.smarthome.user.entity.User;
 import com.smarthome.user.entity.UserRole;
+import com.smarthome.user.service.JwtService;
 import com.smarthome.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,9 @@ class UserControllerTest {
 
     @MockBean
     private UserService userService;
+
+    @MockBean
+    private JwtService jwtService;
 
     private User testUser;
 
