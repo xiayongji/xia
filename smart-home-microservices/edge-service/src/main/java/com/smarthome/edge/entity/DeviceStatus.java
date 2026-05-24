@@ -1,5 +1,6 @@
 package com.smarthome.edge.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DeviceStatus {
 
     @Id
@@ -62,9 +64,5 @@ public class DeviceStatus {
     @PreUpdate
     protected void onUpdate() {
         lastUpdateTime = LocalDateTime.now();
-    }
-
-    public LocalDateTime getLastUpdate() {
-        return lastUpdateTime;
     }
 }
