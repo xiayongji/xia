@@ -1,0 +1,125 @@
+version: '3.8'
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: edge-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MYSQL_DATABASE}
+      MARIADB_USER: ${MYSQL_USER}
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - edge_mysql_data:/var/lib/mysql
+    networks:
+      - edge-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: "256M"
+        reservations:
+          cpus: "0.2"
+          memory: "128M"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-connections=30
+      - --innodb-buffer-pool-size=64M
+      - --skip-performance-schema
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: edge-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - edge_redis_data:/data
+    networks:
+      - edge-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: "96M"
+        reservations:
+          cpus: "0.1"
+          memory: "48M"
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-64mb}
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+
+  edge-service:
+    build:
+      context: ./smart-home-microservices/edge-service
+      dockerfile: Dockerfile
+    image: smart-home/edge-service:pi-minimal
+    container_name: edge-service
+    restart: unless-stopped
+    ports:
+      - "${EDGE_SERVICE_PORT}:8084"
+      - "${EDGE_GRPC_PORT}:9094"
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS_EDGE}
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mariadb:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_REDIS_HOST: redis
+    networks:
+      - edge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: "320M"
+        reservations:
+          cpus: "0.25"
+          memory: "192M"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  edge_mysql_data:
+  edge_redis_data:
+
+networks:
+  edge-network:
+    driver: bridge
